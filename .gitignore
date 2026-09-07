@@ -39,6 +39,9 @@ build/
 *.key
 !deploy/**/*.example.*
 
+# --- local session/tooling state (not project content) ---
+.claude/scheduled_tasks.lock
+
 # --- OS / editor ---
 .DS_Store
 Thumbs.db
