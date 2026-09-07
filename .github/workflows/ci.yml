@@ -32,9 +32,14 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      - name: Install project dependencies (so the audit scans what we actually ship)
+        run: |
+          pip install -e ".[dev]"
+          npm install --no-audit --no-fund
+          go mod download
+
       - name: Install audit tooling
         run: |
-          pip install pip-licenses
           cargo install cargo-deny --locked
           go install github.com/google/go-licenses@latest
           curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin

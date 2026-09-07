@@ -36,7 +36,7 @@ To be verified by `license-auditor` against the actual `LICENSE` file of each pi
 
 | Component | Proposed pin | SPDX (claimed) | Note |
 |---|---|---|---|
-| Rust toolchain | 1.82 (`rust-toolchain.toml`) | MIT OR Apache-2.0 | for `kernel/`, pinned now even though built in Phase 5 |
+| Rust toolchain | 1.98.1 (`rust-toolchain.toml`) | MIT OR Apache-2.0 | for `kernel/`, pinned now even though built in Phase 5; bumped from the original 1.82 proposal after Phase 0 CI showed `cargo-deny` requires rustc ≥1.88 |
 | Go toolchain | 1.23.x | BSD-3-Clause | |
 | Python | 3.12.x | **PSF-2.0, not MIT** | `CLAUDE.md`'s table mislabels this — see disagreement #1 |
 | Node.js | 20 LTS | MIT | |
