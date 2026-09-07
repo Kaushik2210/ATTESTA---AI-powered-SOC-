@@ -1,0 +1,71 @@
+{
+  "_comment": "Fixed input events shared by ledger/golden_test.go (Go) and ledger/verify/tests/golden.rs (Rust). Neither side hardcodes an expected hash: Go computes canonical-CBOR-hex + BLAKE3-hex for each event and writes testdata/golden_vectors.json; Rust independently recomputes from the SAME events in this file and asserts its output matches Go's, byte for byte. That agreement between two independent implementations is the actual proof of cross-language determinism -- not a hash either implementation's author typed in by hand. JSON numbers here are always integers (json.Number on the Go side, serde_json::Number on the Rust side) -- this fixture never uses floats, matching docs/ARCHITECTURE.md 2.2.",
+  "events": [
+    {
+      "name": "minimal",
+      "value": {
+        "schema_version": "1.0.0",
+        "mapping_version": "1",
+        "source_id": "test-fixture",
+        "timestamp_ns": 0
+      }
+    },
+    {
+      "name": "typical_auth_event",
+      "value": {
+        "schema_version": "1.0.0",
+        "mapping_version": "3",
+        "source_id": "okta-system-log",
+        "timestamp_ns": 1767225600000000000,
+        "activity_id": 1,
+        "status_id": 2,
+        "actor": {
+          "user": { "uid": "jdoe", "type": "user" }
+        },
+        "src_endpoint": { "ip": "203.0.113.44" },
+        "unmapped": {
+          "vendor_field_a": "preserved-verbatim",
+          "vendor_field_b": true
+        }
+      }
+    },
+    {
+      "name": "negative_and_large_numbers",
+      "value": {
+        "delta_ns": -118000000000,
+        "velocity_km_h_fixed3": -1,
+        "max_uint32": 4294967295,
+        "large_positive": 9223372036854775807,
+        "zero": 0,
+        "small_negative": -1,
+        "boundary_24": 24,
+        "boundary_23": 23
+      }
+    },
+    {
+      "name": "nested_arrays_and_empties",
+      "value": {
+        "techniques": ["T1110.001", "T1078", "T1059.001"],
+        "hypotheses": [
+          { "id": "H1", "label": "credential compromise", "supported": true },
+          { "id": "H2", "label": "authorized admin activity", "supported": false }
+        ],
+        "empty_array": [],
+        "empty_map": {},
+        "nulls": [null, "not-null", null]
+      }
+    },
+    {
+      "name": "unicode_and_key_ordering_edge_case",
+      "value": {
+        "display_name": "José Álvarez — équipe sécurité",
+        "emoji_field": "🔒",
+        "unmapped": {
+          "b": 1,
+          "a0": 2,
+          "a": 3
+        }
+      }
+    }
+  ]
+}

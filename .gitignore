@@ -5,15 +5,26 @@
 .audit/sbom.spdx.json
 
 # --- Rust ---
+# Lockfiles aren't committed yet — no Rust toolchain is available in this
+# dev environment to generate one correctly; CI generates it fresh each
+# run. Commit Cargo.lock (workspace root only) once a toolchain is
+# available locally to produce and review it — see phases/reports/PHASE-01.md.
 /target/
 **/target/
 Cargo.lock
-!kernel/Cargo.lock
 
 # --- Go ---
+# Same reasoning as Cargo.lock above: no local Go toolchain to generate
+# go.sum correctly; CI runs `go mod tidy` fresh each run instead.
+go.sum
 /bin/
 *.exe
 *.test
+
+# --- Cross-language generated fixtures ---
+# ledger/golden_test.go (Go) writes this; ledger/verify/tests/golden.rs
+# (Rust) reads it in the same CI job. Not source, regenerated every run.
+testdata/golden_vectors.json
 
 # --- Python ---
 __pycache__/

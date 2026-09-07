@@ -36,7 +36,7 @@ jobs:
         run: |
           pip install -e ".[dev]"
           npm install --no-audit --no-fund
-          go mod download
+          go mod tidy
 
       - name: Install audit tooling
         run: |
@@ -69,3 +69,46 @@ jobs:
           python-version-file: .python-version
       - run: pip install pre-commit
       - run: pre-commit run --all-files
+
+  ledger-tests:
+    name: ledger determinism proof (Go + Rust, ${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # Two genuinely different architectures — ubuntu-latest is x86_64,
+        # macos-latest is arm64 (Apple Silicon runners) — per the Phase 1
+        # gate's "10,000 randomly generated events ... across two
+        # machines/architectures" requirement (phases/PHASES.md).
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: go test ./ledger/... (canonicalization, BLAKE3, Merkle, epoch sealing)
+        run: |
+          go mod tidy
+          go test ./ledger/... -run TestGenerateGoldenVectors -v
+          go test ./ledger/... -v
+
+      - name: cargo test (independent Rust re-implementation + cross-language golden vectors)
+        run: cargo test --manifest-path ledger/verify/Cargo.toml
+
+      - name: cargo build --target wasm32-unknown-unknown (the browser verification path)
+        run: cargo build --manifest-path ledger/verify/Cargo.toml --target wasm32-unknown-unknown --release
+
+      - name: Upload cross-language golden vectors
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-vectors-${{ matrix.os }}
+          path: testdata/golden_vectors.json
