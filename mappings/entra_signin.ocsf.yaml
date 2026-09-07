@@ -1,0 +1,22 @@
+# Microsoft Entra ID (Azure AD) sign-in log -> normalized event mapping.
+# See mappings/cloudtrail.ocsf.yaml's header note on versioning.
+source_id: entra-id-signin
+mapping_version: "1"
+schema_version: "1.0.0"
+unmapped_passthrough: true
+
+fields:
+  actor.user.uid:
+    from: userId
+  actor.user.email:
+    from: userPrincipalName
+  src_endpoint.ip:
+    from: ipAddress
+  app.name:
+    from: appDisplayName
+  status.error_code:
+    from: status.errorCode
+    type: int
+  time:
+    from: createdDateTime
+    type: timestamp_ns

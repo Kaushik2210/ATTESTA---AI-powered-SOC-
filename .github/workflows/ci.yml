@@ -71,7 +71,7 @@ jobs:
       - run: pre-commit run --all-files
 
   ledger-tests:
-    name: ledger determinism proof (Go + Rust, ${{ matrix.os }})
+    name: ledger + ingest + agent determinism proof (Go + Rust, ${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -94,11 +94,11 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
-      - name: go test ./ledger/... (canonicalization, BLAKE3, Merkle, epoch sealing)
+      - name: go test ./... (ledger canonicalization/Merkle/epoch, ingest OCSF mapping/replay, agent backpressure buffer)
         run: |
           go mod tidy
           go test ./ledger/... -run TestGenerateGoldenVectors -v
-          go test ./ledger/... -v
+          go test ./... -race -v
 
       - name: cargo test (independent Rust re-implementation + cross-language golden vectors)
         run: cargo test --manifest-path ledger/verify/Cargo.toml

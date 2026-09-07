@@ -83,3 +83,13 @@ func (s *Store) IsRedacted(id EvidenceID) bool {
 	rec, exists := s.rows[id]
 	return exists && rec.redacted
 }
+
+// Len returns the number of distinct EvidenceIDs ever written. Used by
+// callers (e.g. ingest's replay tests) that need to confirm re-ingesting
+// unchanged input added no new nodes — a direct check of invariant I3's
+// dedup property, not something Put's return value alone shows.
+func (s *Store) Len() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.rows)
+}

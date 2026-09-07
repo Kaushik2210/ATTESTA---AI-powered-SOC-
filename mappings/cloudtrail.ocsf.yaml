@@ -1,0 +1,25 @@
+# AWS CloudTrail -> normalized event mapping.
+# docs/ARCHITECTURE.md 2.2: mappings are versioned, and mapping_version
+# participates in the evidence hash — bump it (never edit source_id or
+# schema_version in place) whenever a field derivation changes.
+source_id: aws-cloudtrail
+mapping_version: "1"
+schema_version: "1.0.0"
+unmapped_passthrough: true
+
+fields:
+  event_name:
+    from: eventName
+  event_source:
+    from: eventSource
+  actor.user.uid:
+    from: userIdentity.arn
+  actor.user.name:
+    from: userIdentity.userName
+  src_endpoint.ip:
+    from: sourceIPAddress
+  cloud.region:
+    from: awsRegion
+  time:
+    from: eventTime
+    type: timestamp_ns
