@@ -12,12 +12,6 @@ targets = [
 version = 2
 confidence-threshold = 0.9
 
-[licenses.private]
-# Our own crates (publish = false) are proprietary product code, not a
-# dependency — see README.md "License". Don't require them to carry an
-# SPDX `license` field the way a real third-party dependency must.
-ignore = true
-
 allow = [
     "MIT",
     "Apache-2.0",
@@ -33,6 +27,14 @@ allow = [
 
 # Anything not in `allow` and not explicitly exempted below fails the build.
 exceptions = []
+
+# Our own crates (publish = false) are proprietary product code, not a
+# dependency — see README.md "License". Don't require them to carry an
+# SPDX `license` field the way a real third-party dependency must.
+# NOTE: table keys after a `[header]` belong to that table until the next
+# header — this must stay below every other `[licenses]` key, not above.
+[licenses.private]
+ignore = true
 
 [bans]
 multiple-versions = "warn"
