@@ -1,0 +1,29 @@
+[project]
+name = "attesta"
+version = "0.0.0"
+description = "Monorepo root for ATTESTA. Real Python packages live under services/api, services/detect, services/investigate, services/adjudicate, services/respond as they are built."
+requires-python = ">=3.12,<3.14"
+license = { text = "UNLICENSED" }
+
+[project.optional-dependencies]
+dev = [
+    "pip-licenses>=5.0",
+    "mypy>=1.11",
+    "pre-commit>=4.0",
+]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+
+[tool.setuptools]
+# This root manifest exists to pin the dev/audit toolchain, not to ship a
+# package — each service under services/ gets its own pyproject.toml with
+# real packages once it's built (Phase 6+). Suppress setuptools' automatic
+# package discovery, which otherwise misfires across the monorepo's
+# top-level directories (kernel/, ledger/, etc.).
+packages = []
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"

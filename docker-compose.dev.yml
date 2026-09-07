@@ -1,0 +1,70 @@
+# Local development stack — Phase 0.
+# Pinned versions match phases/reports/BUILD-PLAN.md's proposed Phase 0 pins;
+# license-auditor re-verifies each image's upstream license at the Phase 0 gate.
+#
+# Usage: make dev-up / make dev-down
+
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: attesta-clickhouse
+    ports:
+      - "8123:8123"   # HTTP
+      - "9000:9000"   # native
+    environment:
+      CLICKHOUSE_DB: attesta
+      CLICKHOUSE_USER: attesta
+      CLICKHOUSE_PASSWORD: attesta-dev
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  postgres:
+    image: postgres:16
+    container_name: attesta-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: attesta
+      POSTGRES_USER: attesta
+      POSTGRES_PASSWORD: attesta-dev
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  nats:
+    image: nats:2.10-alpine
+    container_name: attesta-nats
+    command: ["-js", "-sd", "/data"]
+    ports:
+      - "4222:4222"   # client
+      - "8222:8222"   # monitoring
+    volumes:
+      - nats-data:/data
+
+  valkey:
+    image: valkey/valkey:8.0-alpine
+    container_name: attesta-valkey
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkey-data:/data
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:3
+    container_name: attesta-seaweedfs
+    command: ["server", "-s3", "-dir=/data"]
+    ports:
+      - "8333:8333"   # S3 API
+      - "9333:9333"   # master UI
+    volumes:
+      - seaweedfs-data:/data
+
+volumes:
+  clickhouse-data:
+  postgres-data:
+  nats-data:
+  valkey-data:
+  seaweedfs-data:

@@ -1,0 +1,45 @@
+# License policy for the Python, JS/TS and Go ecosystems.
+# Rust is governed separately by deny.toml (cargo-deny's own config format).
+# Keep this list and deny.toml's [licenses.allow] in sync — the license-auditor
+# agent reconciles both against docs/LICENSE-POLICY.md at every phase gate.
+#
+# Consumed by scripts/check_licenses.py.
+
+allow:
+  - MIT
+  - Apache-2.0
+  - BSD-2-Clause
+  - BSD-3-Clause
+  - ISC
+  - PostgreSQL
+  - Unlicense
+  - CC0-1.0
+  - Zlib
+  - OFL-1.1        # fonts only — flagged, not auto-approved, if attached to code
+  - PSF-2.0        # CPython runtime itself
+  - MPL-2.0        # unmodified, separately-distributed components only (e.g. OpenTofu)
+
+# Packages that legitimately carry a license string our scanners can't
+# resolve cleanly (dual-licensed, unpublished metadata, etc.). Each entry
+# requires the written justification the human maintainer recorded in
+# docs/LICENSE-EXCEPTIONS.md — this file only mirrors the package name so
+# the automated gate knows not to block it.
+exceptions: []
+
+# Never allowed, regardless of what a scanner reports — catches cases where
+# a registry mislabels a package's actual license. Mirrors
+# docs/LICENSE-POLICY.md's denylist.
+always_deny:
+  - GPL-1.0
+  - GPL-2.0
+  - GPL-3.0
+  - LGPL-2.1
+  - LGPL-3.0
+  - AGPL-1.0
+  - AGPL-3.0
+  - BSL-1.1
+  - SSPL-1.0
+  - Elastic-2.0
+  - RSAL-1.0
+  - TSL
+  - DRL-1.1

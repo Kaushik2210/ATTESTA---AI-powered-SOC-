@@ -1,0 +1,12 @@
+[package]
+name = "attesta-kernel"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "UNLICENSED"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[lints.rust]
+warnings = "deny"

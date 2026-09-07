@@ -1,0 +1,46 @@
+# cargo-deny configuration — enforces docs/LICENSE-POLICY.md for the Rust workspace.
+# Run: cargo deny check licenses
+
+[graph]
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "aarch64-unknown-linux-gnu" },
+    { triple = "wasm32-unknown-unknown" },
+]
+
+[licenses]
+version = 2
+confidence-threshold = 0.9
+
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unlicense",
+    "CC0-1.0",
+    "Zlib",
+    "PostgreSQL",
+    "MPL-2.0",
+]
+
+# Anything not in `allow` and not explicitly exempted below fails the build.
+exceptions = []
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+deny = [
+    # Explicit denylist mirrors docs/LICENSE-POLICY.md — belt and suspenders
+    # against a transitive dependency reintroducing something we rejected.
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+
+[advisories]
+version = 2
+yanked = "deny"
