@@ -3,7 +3,10 @@ name = "attesta-kernel"
 version = "0.0.0"
 edition = "2021"
 publish = false
-license = "UNLICENSED"
+# Proprietary — see README.md "License". No `license` field: "UNLICENSED" is
+# an npm convention, not a valid SPDX expression, and cargo-deny rejects it.
+# deny.toml's [licenses.private] tells cargo-deny to skip license checks on
+# unpublished workspace members like this one instead.
 
 [lib]
 crate-type = ["cdylib", "rlib"]
