@@ -61,33 +61,44 @@ func NewBoundedBuffer(capacity int, spillDir string) (*BoundedBuffer, error) {
 	return b, nil
 }
 
-// Push enqueues an event. It never blocks and never returns an error due
-// to the buffer being full — only a genuine disk I/O failure while
-// spilling can fail it, which is the honest failure mode: an agent that
-// can't write to its own local disk has a real problem to surface, not
-// one to paper over.
+// Push enqueues an event. It never blocks indefinitely and never returns
+// an error due to the buffer being full — only a genuine disk I/O failure
+// while spilling can fail it, which is the honest failure mode: an agent
+// that can't write to its own local disk has a real problem to surface,
+// not one to paper over.
+//
+// Push holds the buffer's lock for its entire duration, including the
+// disk write when spilling. That's deliberate, not an oversight: an
+// earlier version released the lock around the write, and Next() could
+// then observe "spilling but nothing spilled yet" mid-write and
+// incorrectly flip spilling back off, letting a LATER event slip into
+// memory ahead of the one still being written to disk — a real ordering
+// bug caught by TestBoundedBuffer_ConcurrentProducerConsumer. Holding the
+// lock for the whole call makes every state transition atomic instead.
+// This costs Push/Next some contention under concurrent access, which is
+// acceptable: this type has one producer's worth of lifecycle (see the
+// package doc comment), not multiple concurrent producers competing to
+// spill at once.
 func (b *BoundedBuffer) Push(event []byte) error {
 	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	if !b.spilling && len(b.memQueue) < b.capacity {
 		b.memQueue = append(b.memQueue, event)
-		b.mu.Unlock()
 		b.cond.Signal()
 		return nil
 	}
+
 	b.spilling = true
 	seq := b.spillSeq
 	b.spillSeq++
 	b.spillHits++
-	b.mu.Unlock()
 
 	path := filepath.Join(b.spillDir, fmt.Sprintf("%020d.evt", seq))
 	if err := os.WriteFile(path, event, 0o600); err != nil {
 		return fmt.Errorf("agent: spilling event %d to disk: %w", seq, err)
 	}
-
-	b.mu.Lock()
 	b.spilled = append(b.spilled, path)
-	b.mu.Unlock()
 	b.cond.Signal()
 	return nil
 }
