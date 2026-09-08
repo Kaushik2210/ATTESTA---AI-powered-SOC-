@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/Kaushik2210/attesta/detect/expr"
+	"github.com/Kaushik2210/attesta/detect/stats"
 )
 
 // eventEnv resolves a `where` clause's dotted paths directly against one
@@ -50,12 +51,18 @@ func (e aggregateEnv) Resolve(path []string) (any, error) {
 		alias := strings.TrimPrefix(field, "distinct_")
 		return agg.Distinct[alias], nil
 	case strings.HasPrefix(field, "last_"):
+		// A missing entry here is NOT necessarily a rule-authoring bug:
+		// it also means this case's matching events never actually
+		// carried the tracked field (e.g. a case with only one event at
+		// all, or events that simply lack optional enrichment data).
+		// That's a normal, expected condition — resolving to nil (like
+		// eventEnv does for an absent raw field) lets a rule guard with
+		// `x != null and ...` instead of every such case hard-erroring
+		// the whole evaluation. See phases/reports/PHASE-04.md: this
+		// was a real bug, caught by the benign-corpus FP measurement
+		// hitting exactly this case for the first time.
 		alias := strings.TrimPrefix(field, "last_")
-		v, ok := agg.Last[alias]
-		if !ok {
-			return nil, fmt.Errorf("detect: no tracked last-value %q for source %q (add it to track_last)", alias, path[0])
-		}
-		return v, nil
+		return agg.Last[alias], nil
 	default:
 		// Fall back to this source's own group_by field values, so e.g.
 		// "failures.src_endpoint_ip" reads back the same value that
@@ -116,4 +123,67 @@ func builtinFuncsSQL() map[string]expr.FuncSQL {
 			return "(" + strings.Join(parts, ", ") + ")", nil
 		},
 	}
+}
+
+// baselineFuncs returns the CDL functions backed by a live stats.Store —
+// docs/DETECTION-SPEC.md's "Statistical layer". Unlike asset_group,
+// these read external mutable state, so they're built fresh per
+// evaluation run (see streaming.go/sql.go), closed over the specific
+// Store that run's caller passed in (a warmed-up "pinned snapshot" for
+// replay determinism — phases/reports/PHASE-04.md).
+func baselineFuncs(store *stats.Store) map[string]expr.Func {
+	return map[string]expr.Func{
+		"baseline_is_novel": func(args []any) (any, error) {
+			if len(args) != 3 {
+				return nil, fmt.Errorf("baseline_is_novel takes exactly 3 arguments (entity, attribute, value)")
+			}
+			entity, ok := args[0].(string)
+			if !ok {
+				return nil, fmt.Errorf("baseline_is_novel: entity must be a string, got %T", args[0])
+			}
+			attribute, ok := args[1].(string)
+			if !ok {
+				return nil, fmt.Errorf("baseline_is_novel: attribute must be a string, got %T", args[1])
+			}
+			return store.Get(entity).IsNovel(attribute, renderScalar(args[2])), nil
+		},
+	}
+}
+
+// baselineFuncsSQL renders baseline_is_novel against two tables RunSQL
+// populates from the same Store's current content immediately before
+// running a rule's queries (sql.go's createBaselineTables/
+// insertBaselineData) — "baseline_seen" (entity, attribute, value) and
+// "baseline_observation_count" (entity, attribute, count). Rendering a
+// live Go map as SQL lookup tables, rather than trying to express
+// first-time-seen set membership as a SQL expression, is what lets the
+// SQL path check the exact same snapshot the streaming path does.
+func baselineFuncsSQL(store *stats.Store) map[string]expr.FuncSQL {
+	warmup := store.WarmupThreshold
+	return map[string]expr.FuncSQL{
+		"baseline_is_novel": func(args []string) (string, error) {
+			if len(args) != 3 {
+				return "", fmt.Errorf("baseline_is_novel takes exactly 3 arguments (entity, attribute, value)")
+			}
+			e, a, v := args[0], args[1], args[2]
+			return fmt.Sprintf(
+				"((SELECT COALESCE(cnt, 0) FROM baseline_observation_count WHERE entity = %s AND attribute = %s) >= %d "+
+					"AND NOT EXISTS (SELECT 1 FROM baseline_seen WHERE entity = %s AND attribute = %s AND value = %s))",
+				e, a, warmup, e, a, v,
+			), nil
+		},
+	}
+}
+
+// mergeFuncs combines multiple CDL function registries into one, later
+// maps overriding earlier ones on key collision (none of this reference
+// engine's registries collide in practice).
+func mergeFuncs[T any](maps ...map[string]T) map[string]T {
+	out := make(map[string]T)
+	for _, m := range maps {
+		for k, v := range m {
+			out[k] = v
+		}
+	}
+	return out
 }

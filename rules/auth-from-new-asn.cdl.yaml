@@ -1,0 +1,34 @@
+# Family 2 (credential abuse / valid accounts) -- the baseline-dependent
+# sub-predicate deferred from Phase 3 (docs/PHASES.md puts the
+# statistical layer at Phase 4). Uses baseline_is_novel, backed by
+# detect/stats' first-time-seen tracker.
+id: cdl.credential.auth-from-new-asn
+version: 1
+title: Authentication from an ASN never seen before for this principal
+severity: medium
+tactics: [credential-access, initial-access]
+techniques: [T1078]
+entity: actor.user.uid
+window: 15m
+baseline:
+  warmup_threshold: 3
+  observations:
+    - attribute: asn
+      from: cloud.asn
+sources:
+  auths:
+    from: ocsf.authentication
+    where: 'activity_id == 1 and status_id == 1'
+    group_by: [actor.user.uid]
+    track_last: [cloud.asn]
+emits:
+  - predicate: AUTH_FROM_NEW_ASN
+    when: 'baseline_is_novel(auths.actor_user_uid, "asn", auths.last_cloud_asn)'
+    observed: 'auths.last_cloud_asn'
+tests:
+  - baseline: fixtures/asn_baseline_history.jsonl
+    fixture: fixtures/asn_new_asn_positive.jsonl
+    expect: [AUTH_FROM_NEW_ASN]
+  - baseline: fixtures/asn_baseline_history.jsonl
+    fixture: fixtures/asn_known_asn_negative.jsonl
+    expect: []

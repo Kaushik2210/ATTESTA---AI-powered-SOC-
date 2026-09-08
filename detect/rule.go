@@ -55,10 +55,33 @@ type SuppressSpec struct {
 	Reason string `yaml:"reason"`
 }
 
-// TestSpec is one fixture this rule ships with.
+// TestSpec is one fixture this rule ships with. Baseline, when set, names
+// a second fixture replayed first to warm up a fresh stats.Store before
+// Fixture is evaluated against it — see detect/runner.go's
+// WarmUpBaseline. Empty means the rule doesn't need baseline state for
+// this test (an empty, unwarmed store is still passed through, so
+// baseline_is_novel calls stay well-defined — see docs/DETECTION-SPEC.md's
+// "Statistical layer" and phases/reports/PHASE-04.md).
 type TestSpec struct {
-	Fixture string   `yaml:"fixture"`
-	Expect  []string `yaml:"expect"`
+	Fixture  string   `yaml:"fixture"`
+	Baseline string   `yaml:"baseline,omitempty"`
+	Expect   []string `yaml:"expect"`
+}
+
+// BaselineObservation is one attribute this rule's baseline tracks —
+// e.g. "record every ASN this principal has authenticated from".
+type BaselineObservation struct {
+	Attribute string `yaml:"attribute"`
+	From      string `yaml:"from"` // dotted field path in the raw event
+}
+
+// BaselineSpec declares what this rule's first-time-seen baseline
+// tracks. The entity a baseline is keyed by is always the rule's own
+// Entity field — one baseline concept per rule, not a second one to keep
+// in sync.
+type BaselineSpec struct {
+	WarmupThreshold int64                 `yaml:"warmup_threshold"`
+	Observations    []BaselineObservation `yaml:"observations"`
 }
 
 // Rule is one compiled CDL rule definition.
@@ -71,6 +94,7 @@ type Rule struct {
 	Techniques []string              `yaml:"techniques"`
 	Entity     string                `yaml:"entity"`
 	Window     string                `yaml:"window"`
+	Baseline   *BaselineSpec         `yaml:"baseline,omitempty"`
 	Emits      []EmitSpec            `yaml:"emits"`
 	Sources    map[string]SourceSpec `yaml:"sources"`
 	Suppress   []SuppressSpec        `yaml:"suppress,omitempty"`
@@ -144,6 +168,19 @@ func (r *Rule) Validate() error {
 	for _, s := range r.Suppress {
 		if s.Reason == "" {
 			return fmt.Errorf("suppress clause %q has no reason", s.When)
+		}
+	}
+	if r.Baseline != nil {
+		if r.Baseline.WarmupThreshold <= 0 {
+			return fmt.Errorf("baseline.warmup_threshold must be positive")
+		}
+		if len(r.Baseline.Observations) == 0 {
+			return fmt.Errorf("baseline declared but has no observations")
+		}
+		for _, o := range r.Baseline.Observations {
+			if o.Attribute == "" || o.From == "" {
+				return fmt.Errorf("baseline observation missing attribute or from")
+			}
 		}
 	}
 	if len(r.Tests) == 0 {

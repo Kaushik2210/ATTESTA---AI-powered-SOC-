@@ -1,0 +1,17 @@
+{"activity_id":1,"status_id":1,"actor":{"user":{"uid":"bsmith","type":"user"}},"src_endpoint":{"ip":"192.0.2.10"},"time":1700000000000000000}
+{"activity_id":1,"status_id":1,"actor":{"user":{"uid":"bsmith","type":"user"}},"src_endpoint":{"ip":"192.0.2.10"},"time":1700000600000000000}
+{"activity_id":1,"status_id":1,"actor":{"user":{"uid":"cjones","type":"user"}},"src_endpoint":{"ip":"192.0.2.11"},"time":1700001200000000000}
+{"activity_id":1,"status_id":1,"session_id":"sess-benign-1","src_endpoint":{"ip":"192.0.2.10"},"time":1700000000000000000}
+{"activity_id":1,"status_id":1,"session_id":"sess-benign-1","src_endpoint":{"ip":"192.0.2.10"},"time":1700000300000000000}
+{"activity_id":1,"status_id":1,"session_id":"sess-benign-2","src_endpoint":{"ip":"192.0.2.11"},"time":1700001200000000000}
+{"activity_id":1,"status_id":1,"actor":{"user":{"uid":"dlee"}},"src_endpoint":{"ip":"192.0.2.20"},"time":1700000000000000000}
+{"activity_id":1,"status_id":1,"actor":{"user":{"uid":"dlee"}},"src_endpoint":{"ip":"192.0.2.21"},"distance_from_prev_km":300,"time":1700007200000000000}
+{"activity_id":1,"status_id":1,"actor":{"user":{"uid":"jdoe"}},"cloud":{"asn":"AS64500"},"time":1700000000000000000}
+{"activity_id":1,"status_id":1,"actor":{"user":{"uid":"jdoe"}},"cloud":{"asn":"AS64500"},"time":1700000600000000000}
+{"activity_id":1,"status_id":1,"actor":{"user":{"uid":"jdoe"}},"cloud":{"asn":"AS64500"},"time":1700001200000000000}
+{"activity_id":1,"status_id":1,"actor":{"user":{"uid":"jdoe"}},"cloud":{"asn":"AS64500"},"time":1700001800000000000}
+{"activity_id":1,"app_name":"rdp","src_host":{"uid":"WIN-10"},"dst_host":{"uid":"WIN-20"},"time":1700000000000000000}
+{"activity_id":1,"app_name":"rdp","src_host":{"uid":"WIN-10"},"dst_host":{"uid":"WIN-20"},"time":1700000600000000000}
+{"activity_id":1,"app_name":"rdp","src_host":{"uid":"WIN-10"},"dst_host":{"uid":"WIN-20"},"time":1700001200000000000}
+{"activity_id":1,"is_run_key":false,"host":{"uid":"WIN-30"},"time":1700000000000000000}
+{"activity_id":1,"is_run_key":false,"host":{"uid":"WIN-31"},"time":1700000600000000000}

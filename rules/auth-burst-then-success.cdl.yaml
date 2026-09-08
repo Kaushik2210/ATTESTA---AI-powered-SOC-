@@ -23,7 +23,14 @@ emits:
     when: 'failures.count >= 10'
     observed: 'failures.count'
   - predicate: AUTH_SUCCEEDED_AFTER_FAILURES
-    when: 'success.exists and success.last_ts > failures.last_ts'
+    # failures.exists is load-bearing, not decorative: an empty failures
+    # aggregate's last_ts defaults to the zero value (0), which any real
+    # epoch-nanosecond timestamp trivially exceeds -- without this check
+    # the predicate fires on every ordinary successful login with no
+    # prior failure at all. Found via Phase 4's benign-corpus FP
+    # measurement (phases/reports/PHASE-04.md), which is exactly the
+    # scenario this rule's own Phase 3 fixtures never happened to cover.
+    when: 'failures.exists and success.exists and success.last_ts > failures.last_ts'
     observed: 'success.last_ts - failures.last_ts'
 suppress:
   - when: 'failures.last_actor_user_type == "service" and failures.src_endpoint_ip in asset_group("ci-runners")'

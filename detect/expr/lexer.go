@@ -31,6 +31,7 @@ const (
 	tokIn
 	tokTrue
 	tokFalse
+	tokNull
 	tokDot
 	tokComma
 	tokLParen
@@ -63,6 +64,7 @@ var keywords = map[string]tokenKind{
 	"in":    tokIn,
 	"true":  tokTrue,
 	"false": tokFalse,
+	"null":  tokNull,
 }
 
 type lexer struct {

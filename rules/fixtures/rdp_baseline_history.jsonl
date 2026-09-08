@@ -1,0 +1,2 @@
+{"activity_id":1,"app_name":"rdp","src_host":{"uid":"WIN-01"},"dst_host":{"uid":"WIN-02"},"time":1700000000000000000}
+{"activity_id":1,"app_name":"rdp","src_host":{"uid":"WIN-01"},"dst_host":{"uid":"WIN-02"},"time":1700000010000000000}

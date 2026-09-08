@@ -3,6 +3,8 @@ package detect
 import (
 	"path/filepath"
 	"testing"
+
+	"github.com/Kaushik2210/attesta/detect/stats"
 )
 
 // TestShippedRules_FixturesPass is the Phase 3 gate's first requirement:
@@ -53,7 +55,7 @@ func TestShippedRules_SQLCompiles(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			queries, err := CompileRuleSQL(rule)
+			queries, err := CompileRuleSQL(rule, stats.NewStore(0))
 			if err != nil {
 				t.Fatal(err)
 			}

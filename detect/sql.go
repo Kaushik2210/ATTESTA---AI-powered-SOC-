@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/Kaushik2210/attesta/detect/expr"
+	"github.com/Kaushik2210/attesta/detect/stats"
 	_ "modernc.org/sqlite"
 )
 
@@ -174,9 +175,11 @@ func sqlColumnResolver(sources map[string]SourceSpec) expr.ColumnResolver {
 
 // CompileRuleSQL compiles a rule to one standalone SQL query per emit
 // clause, each returning the (entity, observed) pairs for cases where
-// that predicate fires.
-func CompileRuleSQL(rule *Rule) (map[string]string, error) {
-	funcsSQL := builtinFuncsSQL()
+// that predicate fires. store backs any baseline_is_novel calls the
+// rule's expressions make (see baselineFuncsSQL in env.go); pass
+// stats.NewStore(0) for a rule that doesn't use it.
+func CompileRuleSQL(rule *Rule, store *stats.Store) (map[string]string, error) {
+	funcsSQL := mergeFuncs(builtinFuncsSQL(), baselineFuncsSQL(store))
 
 	names := make([]string, 0, len(rule.Sources))
 	for name := range rule.Sources {
@@ -269,10 +272,11 @@ func CompileRuleSQL(rule *Rule) (map[string]string, error) {
 }
 
 // RunSQL creates a fresh in-memory SQLite database, loads the flattened
-// events, compiles the rule, and executes each emit's query -- the SQL
-// path's counterpart to EvaluateStreaming.
-func RunSQL(rule *Rule, events []map[string]any) ([]Claim, error) {
-	queries, err := CompileRuleSQL(rule)
+// events plus store's current content (if the rule uses baseline_is_novel),
+// compiles the rule, and executes each emit's query -- the SQL path's
+// counterpart to EvaluateStreaming.
+func RunSQL(rule *Rule, events []map[string]any, store *stats.Store) ([]Claim, error) {
+	queries, err := CompileRuleSQL(rule, store)
 	if err != nil {
 		return nil, err
 	}
@@ -288,6 +292,9 @@ func RunSQL(rule *Rule, events []map[string]any) ([]Claim, error) {
 		return nil, err
 	}
 	if err := insertEvents(db, columns, events); err != nil {
+		return nil, err
+	}
+	if err := createBaselineTables(db, store); err != nil {
 		return nil, err
 	}
 
@@ -379,6 +386,68 @@ func insertEvents(db *sql.DB, columns []string, events []map[string]any) error {
 		}
 		if _, err := stmt.Exec(args...); err != nil {
 			return fmt.Errorf("detect: inserting event: %w", err)
+		}
+	}
+	return nil
+}
+
+// createBaselineTables materializes store's current content as two
+// lookup tables baselineFuncsSQL's rendering of baseline_is_novel
+// queries against: "baseline_seen" (entity, attribute, value) and
+// "baseline_observation_count" (entity, attribute, cnt). This is what
+// lets the SQL path check the exact same pinned snapshot the streaming
+// path does, rather than a SQL-side reimplementation of first-time-seen
+// logic that could silently drift from it.
+func createBaselineTables(db *sql.DB, store *stats.Store) error {
+	if _, err := db.Exec("CREATE TABLE baseline_seen (entity, attribute, value)"); err != nil {
+		return fmt.Errorf("detect: creating baseline_seen table: %w", err)
+	}
+	if _, err := db.Exec("CREATE TABLE baseline_observation_count (entity, attribute, cnt)"); err != nil {
+		return fmt.Errorf("detect: creating baseline_observation_count table: %w", err)
+	}
+	if store == nil {
+		return nil
+	}
+
+	seenStmt, err := db.Prepare("INSERT INTO baseline_seen (entity, attribute, value) VALUES (?, ?, ?)")
+	if err != nil {
+		return fmt.Errorf("detect: preparing baseline_seen insert: %w", err)
+	}
+	defer seenStmt.Close()
+
+	countStmt, err := db.Prepare("INSERT INTO baseline_observation_count (entity, attribute, cnt) VALUES (?, ?, ?)")
+	if err != nil {
+		return fmt.Errorf("detect: preparing baseline_observation_count insert: %w", err)
+	}
+	defer countStmt.Close()
+
+	entities := make([]string, 0, len(store.Baselines))
+	for e := range store.Baselines {
+		entities = append(entities, e)
+	}
+	sort.Strings(entities)
+
+	for _, entity := range entities {
+		b := store.Baselines[entity]
+		attrs := make([]string, 0, len(b.SeenValues))
+		for a := range b.SeenValues {
+			attrs = append(attrs, a)
+		}
+		sort.Strings(attrs)
+		for _, attribute := range attrs {
+			values := make([]string, 0, len(b.SeenValues[attribute]))
+			for v := range b.SeenValues[attribute] {
+				values = append(values, v)
+			}
+			sort.Strings(values)
+			for _, v := range values {
+				if _, err := seenStmt.Exec(entity, attribute, v); err != nil {
+					return fmt.Errorf("detect: inserting baseline_seen row: %w", err)
+				}
+			}
+			if _, err := countStmt.Exec(entity, attribute, b.ObservationCount[attribute]); err != nil {
+				return fmt.Errorf("detect: inserting baseline_observation_count row: %w", err)
+			}
 		}
 	}
 	return nil

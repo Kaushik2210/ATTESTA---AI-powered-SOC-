@@ -77,6 +77,8 @@ func ToSQL(node Node, cols ColumnResolver, funcs map[string]FuncSQL) (string, er
 
 func literalSQL(v any) (string, error) {
 	switch t := v.(type) {
+	case nil:
+		return "NULL", nil
 	case int64:
 		return strconv.FormatInt(t, 10), nil
 	case float64:
@@ -102,6 +104,11 @@ var sqlBinaryOps = map[string]string{
 	"+": "+", "-": "-", "*": "*", "/": "/",
 }
 
+func isNullLiteral(n Node) bool {
+	lit, ok := n.(Literal)
+	return ok && lit.Value == nil
+}
+
 func binarySQL(n Binary, cols ColumnResolver, funcs map[string]FuncSQL) (string, error) {
 	l, err := ToSQL(n.L, cols, funcs)
 	if err != nil {
@@ -110,6 +117,26 @@ func binarySQL(n Binary, cols ColumnResolver, funcs map[string]FuncSQL) (string,
 	r, err := ToSQL(n.R, cols, funcs)
 	if err != nil {
 		return "", err
+	}
+	// SQL's three-valued logic makes `x != NULL` always evaluate to
+	// NULL (never true), regardless of x — nothing "equals" or
+	// "not-equals" NULL under = / != in standard SQL. Eval's Go
+	// semantics treat null literally (nil == nil is true, matching
+	// ordinary equality), so == / != against a null literal must render
+	// as IS / IS NOT here to actually match that behavior instead of
+	// silently becoming an always-NULL (always-excluded-from-WHERE)
+	// condition.
+	if n.Op == "==" && (isNullLiteral(n.L) || isNullLiteral(n.R)) {
+		if isNullLiteral(n.L) {
+			return "(" + r + " IS NULL)", nil
+		}
+		return "(" + l + " IS NULL)", nil
+	}
+	if n.Op == "!=" && (isNullLiteral(n.L) || isNullLiteral(n.R)) {
+		if isNullLiteral(n.L) {
+			return "(" + r + " IS NOT NULL)", nil
+		}
+		return "(" + l + " IS NOT NULL)", nil
 	}
 	switch n.Op {
 	case "and":

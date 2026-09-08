@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/Kaushik2210/attesta/detect/expr"
+	"github.com/Kaushik2210/attesta/detect/stats"
 )
 
 // Claim is what a rule emits — never an alert. Severity is decided later
@@ -35,8 +36,15 @@ type Claim struct {
 // watermarks, late data) is a separate, substantial feature deferred
 // rather than half-built here. Fixtures are written so every case's
 // events fall within the rule's stated window by construction.
-func EvaluateStreaming(rule *Rule, events []map[string]any) ([]Claim, error) {
-	funcs := builtinFuncs()
+//
+// store is the (possibly already warmed-up) baseline snapshot
+// baseline_is_novel reads from — pass stats.NewStore(0) for a rule that
+// doesn't use it. Query-only: EvaluateStreaming never writes to store
+// (see detect/runner.go's WarmUpBaseline for how a store gets warmed up
+// before replay, per docs/PHASES.md's "replaying a corpus against a
+// pinned snapshot" gate requirement).
+func EvaluateStreaming(rule *Rule, events []map[string]any, store *stats.Store) ([]Claim, error) {
+	funcs := mergeFuncs(builtinFuncs(), baselineFuncs(store))
 	unionFields := unionGroupFields(rule.Sources)
 	cases := enumerateCases(events, unionFields)
 

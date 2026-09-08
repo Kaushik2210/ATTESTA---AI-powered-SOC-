@@ -1,0 +1,27 @@
+# Family 6 (persistence). Plain correlation, no baseline needed --
+# `is_run_key` stands in for real registry-path pattern matching (this
+# reference engine's expression language has no string-contains/regex
+# function; see phases/reports/PHASE-04.md). A production mapping stage
+# would compute this flag from the actual registry key path.
+id: cdl.persistence.registry-run-key-installed
+version: 1
+title: Persistence via registry Run key creation
+severity: high
+tactics: [persistence]
+techniques: [T1547.001]
+entity: host.uid
+window: 15m
+sources:
+  registry:
+    from: ocsf.registry_key_activity
+    where: 'activity_id == 1 and is_run_key == true'
+    group_by: [host.uid]
+emits:
+  - predicate: PERSISTENCE_INSTALLED
+    when: 'registry.count >= 1'
+    observed: 'registry.count'
+tests:
+  - fixture: fixtures/persistence_positive.jsonl
+    expect: [PERSISTENCE_INSTALLED]
+  - fixture: fixtures/persistence_negative.jsonl
+    expect: []

@@ -222,3 +222,49 @@ func TestToSQL_DivisionMatchesFloatSemantics(t *testing.T) {
 		t.Fatalf("got %q, want %q", sql, want)
 	}
 }
+
+func TestEval_NullLiteral(t *testing.T) {
+	env := testEnv{"x": "present"}
+	if got := mustEval(t, "x != null", env); got != true {
+		t.Fatalf("x != null: got %v, want true", got)
+	}
+	if got := mustEval(t, "x == null", env); got != false {
+		t.Fatalf("x == null: got %v, want false", got)
+	}
+	if got := mustEval(t, "null == null", env); got != true {
+		t.Fatalf("null == null: got %v, want true", got)
+	}
+}
+
+// TestToSQL_NullComparisonUsesIsNotStandardEquality proves the fix
+// described in tosql.go's binarySQL: `x != NULL` in standard SQL is
+// ALWAYS NULL (never true), regardless of x, under three-valued logic —
+// rendering CDL's `!=` naively as SQL `!=` would silently turn "x has a
+// value" into a condition that can never be true, excluding every row.
+func TestToSQL_NullComparisonUsesIsNotStandardEquality(t *testing.T) {
+	cols := func(path []string) (string, error) { return path[0], nil }
+
+	neqNode, err := Parse("x != null")
+	if err != nil {
+		t.Fatal(err)
+	}
+	neqSQL, err := ToSQL(neqNode, cols, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "(x IS NOT NULL)"; neqSQL != want {
+		t.Fatalf("x != null -> got %q, want %q", neqSQL, want)
+	}
+
+	eqNode, err := Parse("x == null")
+	if err != nil {
+		t.Fatal(err)
+	}
+	eqSQL, err := ToSQL(eqNode, cols, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "(x IS NULL)"; eqSQL != want {
+		t.Fatalf("x == null -> got %q, want %q", eqSQL, want)
+	}
+}

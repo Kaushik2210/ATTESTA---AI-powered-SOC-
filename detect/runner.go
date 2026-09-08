@@ -7,6 +7,8 @@ import (
 	"os"
 	"sort"
 	"strconv"
+
+	"github.com/Kaushik2210/attesta/detect/stats"
 )
 
 // LoadFixture reads a newline-delimited JSON event corpus (the same
@@ -155,6 +157,57 @@ func stringSetEqual(a, b []string) bool {
 	return true
 }
 
+// WarmUpBaseline replays a corpus through rule's declared baseline
+// observations (rule.Baseline), recording each into store. This is the
+// "warm-up phase" docs/DETECTION-SPEC.md describes — run once, before
+// any detection, to produce the "pinned snapshot" a replay is then
+// checked against (phases/PHASES.md's Phase 4 gate). A rule with no
+// Baseline declared is a no-op.
+func WarmUpBaseline(rule *Rule, events []map[string]any, store *stats.Store) error {
+	if rule.Baseline == nil {
+		return nil
+	}
+	for _, ev := range events {
+		entityVal, ok := resolvePath(ev, splitPath(rule.Entity))
+		if !ok {
+			continue // this event doesn't carry the entity field; nothing to key a baseline on
+		}
+		entity := renderScalar(entityVal)
+		for _, obs := range rule.Baseline.Observations {
+			v, ok := resolvePath(ev, splitPath(obs.From))
+			if !ok {
+				continue
+			}
+			store.Get(entity).Observe(obs.Attribute, renderScalar(v))
+		}
+	}
+	return nil
+}
+
+// newStoreForTest builds the stats.Store a single TestSpec runs against:
+// an empty one if the rule declares no baseline, or one warmed up from
+// test.Baseline's fixture otherwise. A fresh Store per test keeps tests
+// isolated from each other.
+func newStoreForTest(rule *Rule, test TestSpec) (*stats.Store, error) {
+	warmup := int64(0)
+	if rule.Baseline != nil {
+		warmup = rule.Baseline.WarmupThreshold
+	}
+	store := stats.NewStore(warmup)
+	if test.Baseline == "" {
+		return store, nil
+	}
+	historyPath := rule.dir + "/" + test.Baseline
+	history, err := LoadFixture(historyPath)
+	if err != nil {
+		return nil, err
+	}
+	if err := WarmUpBaseline(rule, history, store); err != nil {
+		return nil, err
+	}
+	return store, nil
+}
+
 // RunFixtureTests runs every fixture a rule ships with through the
 // streaming path and checks the resulting predicate set against
 // `expect`. It does not run the SQL path — that's a separate, heavier
@@ -167,7 +220,11 @@ func RunFixtureTests(rule *Rule) error {
 		if err != nil {
 			return err
 		}
-		claims, err := EvaluateStreaming(rule, events)
+		store, err := newStoreForTest(rule, test)
+		if err != nil {
+			return fmt.Errorf("rule %s, fixture %s: warming baseline: %w", rule.ID, test.Fixture, err)
+		}
+		claims, err := EvaluateStreaming(rule, events, store)
 		if err != nil {
 			return fmt.Errorf("rule %s, fixture %s: %w", rule.ID, test.Fixture, err)
 		}
@@ -189,11 +246,15 @@ func RunEquivalence(rule *Rule) error {
 		if err != nil {
 			return err
 		}
-		streamClaims, err := EvaluateStreaming(rule, events)
+		store, err := newStoreForTest(rule, test)
+		if err != nil {
+			return fmt.Errorf("rule %s, fixture %s: warming baseline: %w", rule.ID, test.Fixture, err)
+		}
+		streamClaims, err := EvaluateStreaming(rule, events, store)
 		if err != nil {
 			return fmt.Errorf("rule %s, fixture %s: streaming: %w", rule.ID, test.Fixture, err)
 		}
-		sqlClaims, err := RunSQL(rule, events)
+		sqlClaims, err := RunSQL(rule, events, store)
 		if err != nil {
 			return fmt.Errorf("rule %s, fixture %s: SQL: %w", rule.ID, test.Fixture, err)
 		}

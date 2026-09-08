@@ -179,6 +179,9 @@ func (p *parser) parsePrimary() (Node, error) {
 	case tokFalse:
 		p.advance()
 		return Literal{Value: false}, nil
+	case tokNull:
+		p.advance()
+		return Literal{Value: nil}, nil
 	case tokLParen:
 		p.advance()
 		inner, err := p.parseOr()

@@ -1,0 +1,34 @@
+# Family 8 (lateral movement). "First-time-seen host pairs are the
+# highest-signal, lowest-cost feature here" (docs/DETECTION-SPEC.md) --
+# reuses the same baseline_is_novel mechanism as auth-from-new-asn.cdl.yaml,
+# keyed by source host instead of principal.
+id: cdl.lateral-movement.rdp-internal-first-time
+version: 1
+title: RDP connection to a destination host never seen before from this source host
+severity: medium
+tactics: [lateral-movement]
+techniques: [T1021.001]
+entity: src_host.uid
+window: 15m
+baseline:
+  warmup_threshold: 2
+  observations:
+    - attribute: dst_host
+      from: dst_host.uid
+sources:
+  rdp:
+    from: ocsf.network_activity
+    where: 'app_name == "rdp"'
+    group_by: [src_host.uid]
+    track_last: [dst_host.uid]
+emits:
+  - predicate: RDP_INTERNAL_FIRST_TIME
+    when: 'baseline_is_novel(rdp.src_host_uid, "dst_host", rdp.last_dst_host_uid)'
+    observed: 'rdp.last_dst_host_uid'
+tests:
+  - baseline: fixtures/rdp_baseline_history.jsonl
+    fixture: fixtures/rdp_new_pair_positive.jsonl
+    expect: [RDP_INTERNAL_FIRST_TIME]
+  - baseline: fixtures/rdp_baseline_history.jsonl
+    fixture: fixtures/rdp_known_pair_negative.jsonl
+    expect: []

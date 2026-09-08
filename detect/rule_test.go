@@ -32,6 +32,9 @@ var shippedRuleFiles = []string{
 	"auth-burst-then-success.cdl.yaml",
 	"token-replayed.cdl.yaml",
 	"impossible-travel.cdl.yaml",
+	"auth-from-new-asn.cdl.yaml",
+	"rdp-internal-first-time.cdl.yaml",
+	"persistence-registry-run-key.cdl.yaml",
 }
 
 func TestLoadRule_AllShippedRulesValidate(t *testing.T) {

@@ -20,7 +20,15 @@ sources:
     track_last: [distance_from_prev_km, src_endpoint.ip]
 emits:
   - predicate: TRAVEL_IMPOSSIBLE
-    when: '(auths.last_distance_from_prev_km / ((auths.last_ts - auths.first_ts) / 3600000000000)) > 900'
+    # auths.count >= 2 guards against a single-auth case, where first_ts
+    # == last_ts would divide by zero; the != null guard covers a case
+    # whose events never carried distance_from_prev_km at all (e.g. no
+    # enrichment data yet). Both are load-bearing, not decorative — see
+    # phases/reports/PHASE-04.md: an unguarded version of this exact
+    # expression crashed the whole rule evaluation on ordinary
+    # single-login benign activity, caught by the benign-corpus FP
+    # measurement.
+    when: 'auths.count >= 2 and auths.last_distance_from_prev_km != null and (auths.last_distance_from_prev_km / ((auths.last_ts - auths.first_ts) / 3600000000000)) > 900'
     observed: 'auths.last_distance_from_prev_km / ((auths.last_ts - auths.first_ts) / 3600000000000)'
 suppress:
   - when: 'auths.last_src_endpoint_ip in asset_group("corporate-egress")'
