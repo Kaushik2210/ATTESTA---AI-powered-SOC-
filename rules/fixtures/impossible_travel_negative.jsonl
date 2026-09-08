@@ -1,0 +1,2 @@
+{"activity_id":1,"status_id":1,"actor":{"user":{"uid":"asmith"}},"src_endpoint":{"ip":"198.51.100.20"},"time":1700000000000000000}
+{"activity_id":1,"status_id":1,"actor":{"user":{"uid":"asmith"}},"src_endpoint":{"ip":"198.51.100.21"},"distance_from_prev_km":200,"time":1700003600000000000}

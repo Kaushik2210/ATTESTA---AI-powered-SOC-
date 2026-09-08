@@ -1,0 +1,27 @@
+# Family 2 (credential abuse / valid accounts). AUTH_FROM_NEW_ASN and
+# AUTH_OUTSIDE_BASELINE_HOURS both need Phase 4's statistical baseline
+# layer, which doesn't exist yet -- TOKEN_REPLAYED is the sub-predicate
+# from this family expressible without it (see phases/reports/PHASE-03.md).
+id: cdl.credential.token-replayed
+version: 1
+title: Session token used from multiple distinct source IPs
+severity: high
+tactics: [credential-access]
+techniques: [T1550.001]
+entity: session_id
+window: 15m
+sources:
+  sessions:
+    from: ocsf.authentication
+    where: 'activity_id == 1 and status_id == 1'
+    group_by: [session_id]
+    track_distinct: [src_endpoint.ip]
+emits:
+  - predicate: TOKEN_REPLAYED
+    when: 'sessions.distinct_src_endpoint_ip >= 2'
+    observed: 'sessions.distinct_src_endpoint_ip'
+tests:
+  - fixture: fixtures/token_replayed_positive.jsonl
+    expect: [TOKEN_REPLAYED]
+  - fixture: fixtures/token_replayed_negative.jsonl
+    expect: []

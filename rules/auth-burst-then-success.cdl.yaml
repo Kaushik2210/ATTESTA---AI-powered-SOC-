@@ -1,0 +1,35 @@
+# Family 1 (brute force / password spray) — docs/DETECTION-SPEC.md's own
+# worked example, reproduced here as an actual compiled-and-tested rule.
+id: cdl.credential.auth-burst-then-success
+version: 1
+title: Failed authentication burst followed by success
+severity: high
+tactics: [credential-access, initial-access]
+techniques: [T1110.001, T1078]
+entity: actor.user.uid
+window: 15m
+sources:
+  failures:
+    from: ocsf.authentication
+    where: 'activity_id == 1 and status_id == 2'
+    group_by: [actor.user.uid, src_endpoint.ip]
+    track_last: [actor.user.type]
+  success:
+    from: ocsf.authentication
+    where: 'activity_id == 1 and status_id == 1'
+    group_by: [actor.user.uid]
+emits:
+  - predicate: AUTH_FAILED_BURST
+    when: 'failures.count >= 10'
+    observed: 'failures.count'
+  - predicate: AUTH_SUCCEEDED_AFTER_FAILURES
+    when: 'success.exists and success.last_ts > failures.last_ts'
+    observed: 'success.last_ts - failures.last_ts'
+suppress:
+  - when: 'failures.last_actor_user_type == "service" and failures.src_endpoint_ip in asset_group("ci-runners")'
+    reason: CI runners retry aggressively by design
+tests:
+  - fixture: fixtures/auth_burst_positive.jsonl
+    expect: [AUTH_FAILED_BURST, AUTH_SUCCEEDED_AFTER_FAILURES]
+  - fixture: fixtures/auth_burst_service_account.jsonl
+    expect: []

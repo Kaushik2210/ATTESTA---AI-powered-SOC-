@@ -1,0 +1,2 @@
+{"activity_id":1,"status_id":1,"actor":{"user":{"uid":"jdoe"}},"src_endpoint":{"ip":"203.0.113.44"},"time":1700000000000000000}
+{"activity_id":1,"status_id":1,"actor":{"user":{"uid":"jdoe"}},"src_endpoint":{"ip":"198.51.100.20"},"distance_from_prev_km":2000,"time":1700003600000000000}

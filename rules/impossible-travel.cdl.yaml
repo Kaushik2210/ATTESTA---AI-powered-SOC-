@@ -1,0 +1,32 @@
+# Family 3 (impossible travel). Real IP-geolocation enrichment is
+# deferred (docs/ARCHITECTURE.md's ingest/enrichment concern, not this
+# phase's) -- events here carry a pre-computed distance_from_prev_km as
+# if an enrichment stage already ran; this rule's own logic (velocity
+# threshold, suppress on corporate egress) is what's under test. See
+# phases/reports/PHASE-03.md.
+id: cdl.impossible-travel
+version: 1
+title: Authentication velocity between consecutive locations exceeds physical travel limits
+severity: high
+tactics: [initial-access, defense-evasion]
+techniques: [T1078]
+entity: actor.user.uid
+window: 6h
+sources:
+  auths:
+    from: ocsf.authentication
+    where: 'activity_id == 1 and status_id == 1'
+    group_by: [actor.user.uid]
+    track_last: [distance_from_prev_km, src_endpoint.ip]
+emits:
+  - predicate: TRAVEL_IMPOSSIBLE
+    when: '(auths.last_distance_from_prev_km / ((auths.last_ts - auths.first_ts) / 3600000000000)) > 900'
+    observed: 'auths.last_distance_from_prev_km / ((auths.last_ts - auths.first_ts) / 3600000000000)'
+suppress:
+  - when: 'auths.last_src_endpoint_ip in asset_group("corporate-egress")'
+    reason: Known corporate VPN/proxy egress range; velocity here is expected, not travel
+tests:
+  - fixture: fixtures/impossible_travel_positive.jsonl
+    expect: [TRAVEL_IMPOSSIBLE]
+  - fixture: fixtures/impossible_travel_negative.jsonl
+    expect: []
