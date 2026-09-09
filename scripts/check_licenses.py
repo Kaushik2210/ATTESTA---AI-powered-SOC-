@@ -26,7 +26,7 @@ POLICY_FILE = ROOT / ".licenserc.yaml"
 # This repository's own package(s) — proprietary product code, not a
 # third-party dependency, so it doesn't belong in a *dependency* license
 # gate. README.md / docs/LICENSE-POLICY.md cover the product's own license.
-OWN_PACKAGES = {"attesta"}
+OWN_PACKAGES = {"attesta", "attesta-investigate"}
 
 
 def load_policy() -> tuple[set[str], set[str]]:

@@ -23,6 +23,11 @@ allow = [
     "Zlib",
     "PostgreSQL",
     "MPL-2.0",
+    # OSI-approved permissive license covering Unicode Character Database
+    # data files; carried by unicode-ident (a transitive dep of
+    # proc-macro2/syn/serde_derive, pulled in by kernel/Cargo.toml's serde
+    # dependency for the JSON CLI bridge — see adjudicate_cli.rs).
+    "Unicode-3.0",
 ]
 
 # Anything not in `allow` and not explicitly exempted below fails the build.
