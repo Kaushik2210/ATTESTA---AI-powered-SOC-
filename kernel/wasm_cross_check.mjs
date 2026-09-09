@@ -33,7 +33,16 @@ let mismatches = 0;
 for (const line of nativeLines) {
   const [indexStr, nativeHex] = line.trim().split(/\s+/);
   const index = Number(indexStr);
-  const wasmResult = exportFn(index); // BigInt, per the WebAssembly/JS BigInt integration
+  // BigInt, per the WebAssembly/JS BigInt integration -- but wasm's i64
+  // type carries no signedness of its own, and Node decodes it as a
+  // SIGNED 64-bit BigInt by convention. The Rust side returns u64, so any
+  // hash whose top bit is set comes back as a negative BigInt here even
+  // though nothing about the underlying value differs. asUintN
+  // reinterprets the same 64 bits as unsigned before formatting, which is
+  // what actually matches Rust's `{:016x}` (u64) formatting on the native
+  // side -- this is a JS-side interpretation fix, not evidence of any
+  // real cross-target difference (see phases/reports/PHASE-05.md).
+  const wasmResult = BigInt.asUintN(64, exportFn(index));
   const wasmHex = wasmResult.toString(16).padStart(16, "0");
   if (wasmHex !== nativeHex) {
     console.error(`MISMATCH scenario ${index}: native=${nativeHex} wasm=${wasmHex}`);
