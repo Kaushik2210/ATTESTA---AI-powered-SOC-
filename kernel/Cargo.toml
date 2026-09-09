@@ -11,5 +11,8 @@ publish = false
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[dependencies]
+blake3 = "1.5"
+
 [lints.rust]
 warnings = "deny"

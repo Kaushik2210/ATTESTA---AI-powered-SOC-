@@ -112,3 +112,47 @@ jobs:
         with:
           name: golden-vectors-${{ matrix.os }}
           path: testdata/golden_vectors.json
+
+      - name: cargo test kernel (debug) -- determinism, no-panic fuzz-like property tests
+        run: cargo test --manifest-path kernel/Cargo.toml
+
+      - name: cargo test kernel (release) -- same properties, release profile
+        run: cargo test --manifest-path kernel/Cargo.toml --release
+
+      - name: cargo build kernel --target wasm32-unknown-unknown (native-vs-wasm cross-target proof, half 1)
+        run: cargo build --manifest-path kernel/Cargo.toml --target wasm32-unknown-unknown --release
+
+      - name: Print native kernel fixed-scenario hashes (native-vs-wasm proof, half 2 + cross-arch input)
+        run: cargo run --manifest-path kernel/Cargo.toml --release --bin print_fixed_hashes > kernel-hashes-${{ matrix.os }}.txt
+
+      - name: Compare native vs wasm32 kernel execution (Node.js WebAssembly BigInt i64 comparison)
+        run: node kernel/wasm_cross_check.mjs target/wasm32-unknown-unknown/release/attesta_kernel.wasm kernel-hashes-${{ matrix.os }}.txt
+
+      - name: Upload native kernel hashes (for the cross-architecture comparison job below)
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-hashes-${{ matrix.os }}
+          path: kernel-hashes-${{ matrix.os }}.txt
+
+  kernel-cross-arch-check:
+    name: kernel cross-architecture determinism (x86_64 vs arm64)
+    needs: ledger-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: kernel-hashes-ubuntu-latest
+          path: hashes/ubuntu
+      - uses: actions/download-artifact@v4
+        with:
+          name: kernel-hashes-macos-latest
+          path: hashes/macos
+      - name: Diff x86_64 (ubuntu-latest) vs arm64 (macos-latest) fixed-scenario hashes
+        run: |
+          echo "ubuntu-latest (x86_64):"
+          cat hashes/ubuntu/kernel-hashes-ubuntu-latest.txt
+          echo "macos-latest (arm64):"
+          cat hashes/macos/kernel-hashes-macos-latest.txt
+          diff hashes/ubuntu/kernel-hashes-ubuntu-latest.txt hashes/macos/kernel-hashes-macos-latest.txt \
+            && echo "IDENTICAL across architectures" \
+            || (echo "DETERMINISM VIOLATION: kernel verdict hashes differ between x86_64 and arm64" && exit 1)
