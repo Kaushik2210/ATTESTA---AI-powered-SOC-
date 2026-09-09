@@ -85,6 +85,12 @@ struct VerdictOutput {
     policy_version: String,
     kernel_version: String,
     verdict_hash: String,
+    /// claim_id() for every claim in the *submitted* set, in submission
+    /// order — not just the ones that ended up contributing weight. This
+    /// is what services/adjudicate's manifest sealing (Phase 7) records
+    /// as `InvestigationManifest.claim_ids[]`; `contributing_claims`
+    /// above stays scoped to what the verdict actually used.
+    submitted_claim_ids: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -116,6 +122,8 @@ fn main() {
         }
     }
 
+    let submitted_claim_ids: Vec<String> = claims.iter().map(|c| hex_encode(&c.claim_id())).collect();
+
     let verdict = adjudicate(&claims, &policy, &request.kernel_version);
     let output = VerdictOutput {
         severity: verdict.severity.name().to_string(),
@@ -134,6 +142,7 @@ fn main() {
         policy_version: verdict.policy_version,
         kernel_version: verdict.kernel_version,
         verdict_hash: hex_encode(&verdict.verdict_hash),
+        submitted_claim_ids,
     };
 
     let stdout = io::stdout();

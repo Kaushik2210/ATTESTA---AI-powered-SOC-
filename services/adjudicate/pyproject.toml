@@ -1,0 +1,26 @@
+[project]
+name = "attesta-adjudicate"
+version = "0.0.0"
+description = "Manifest sealing, the per-tenant transparency log, and the replay executor (--pin / --rederive) -- docs/ARCHITECTURE.md 2.9-2.10. Depends on attesta_investigate's Claim models at test time; both packages are installed into the same monorepo environment, not published, so that is not declared as a pip dependency here -- see README note in tests/conftest.py."
+requires-python = ">=3.12,<3.14"
+license = { text = "UNLICENSED" }
+dependencies = [
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "mypy>=1.11",
+]
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+
+[tool.setuptools]
+packages = ["attesta_adjudicate"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"

@@ -33,7 +33,7 @@ def find_kernel_cli(repo_root: Path) -> Path:
     )
 
 
-def _claim_to_json(claim: ProposedClaim) -> dict[str, Any]:
+def claim_to_json(claim: ProposedClaim) -> dict[str, Any]:
     return {
         "predicate": claim.predicate,
         "subject": claim.subject,
@@ -59,18 +59,37 @@ def adjudicate(
 ) -> dict[str, Any]:
     """Calls the real kernel and returns its Verdict as a dict (severity,
     confidence, disposition, attack_techniques, contributing_claims,
-    policy_version, kernel_version, verdict_hash — see
-    adjudicate_cli.rs's VerdictOutput).
+    policy_version, kernel_version, verdict_hash, submitted_claim_ids —
+    see adjudicate_cli.rs's VerdictOutput).
     """
     if kernel_cli_path is None:
         if repo_root is None:
             raise ValueError("adjudicate requires either kernel_cli_path or repo_root")
         kernel_cli_path = find_kernel_cli(repo_root)
 
+    return adjudicate_raw([claim_to_json(c) for c in claims], policy, kernel_version, kernel_cli_path)
+
+
+def adjudicate_raw(
+    claims_json: list[dict[str, Any]],
+    policy: dict[str, Any],
+    kernel_version: str,
+    kernel_cli_path: Path,
+) -> dict[str, Any]:
+    """The same call as `adjudicate`, but for callers that already hold
+    claims in adjudicate_cli's own wire shape (extractor_kind/id/version
+    flattened, not nested under `extractor`) rather than as `ProposedClaim`
+    objects — services/adjudicate's replay executor (Phase 7) is the
+    reason this exists: `replay --pin` re-submits a *stored* claim set
+    exactly as recorded, without reconstructing ProposedClaim objects
+    (and re-running the Claim Gate) that Phase 6's investigation already
+    ran once. `adjudicate` above is a thin wrapper around this for the
+    common case of calling straight from an investigation's own output.
+    """
     request = {
         "kernel_version": kernel_version,
         "policy": policy,
-        "claims": [_claim_to_json(c) for c in claims],
+        "claims": claims_json,
     }
 
     proc = subprocess.run(

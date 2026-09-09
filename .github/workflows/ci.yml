@@ -36,6 +36,7 @@ jobs:
         run: |
           pip install -e ".[dev]"
           pip install -e "./services/investigate[dev]"
+          pip install -e "./services/adjudicate[dev]"
           npm install --no-audit --no-fund
           go mod tidy
 
@@ -106,6 +107,12 @@ jobs:
           go test ./ledger/... -run TestGenerateGoldenVectors -v
           go test ./... -race -v
 
+      - name: go build manifest_cli and merkle_cli (the JSON bridges services/adjudicate calls)
+        run: |
+          mkdir -p target/release
+          go build -o target/release/manifest_cli ./ledger/cmd/manifest_cli
+          go build -o target/release/merkle_cli ./ledger/cmd/merkle_cli
+
       - name: cargo test (independent Rust re-implementation + cross-language golden vectors)
         run: cargo test --manifest-path ledger/verify/Cargo.toml
 
@@ -142,6 +149,12 @@ jobs:
 
       - name: pytest services/investigate -- includes the real injection-containment gate against the built kernel CLI
         run: pytest services/investigate/tests -v
+
+      - name: Install services/adjudicate (manifest sealing, transparency log, replay executor)
+        run: pip install -e "./services/adjudicate[dev]"
+
+      - name: pytest services/adjudicate -- the Phase 7 gate (replay --pin on 1,000 manifests, --rederive, export bundle)
+        run: pytest services/adjudicate/tests -v
 
       - name: Upload native kernel hashes (for the cross-architecture comparison job below)
         uses: actions/upload-artifact@v4
