@@ -57,6 +57,15 @@ impl Tactic {
             Tactic::Impact => "impact",
         }
     }
+
+    /// Inverse of `name` — used by src/bin/adjudicate_cli.rs to parse a
+    /// policy bundle's JSON. Plain string matching, no serde: this stays
+    /// in the core module deliberately, since "what string names this
+    /// tactic" is a fact about `Tactic` itself, not about any one
+    /// consumer's serialization format.
+    pub fn from_name(s: &str) -> Option<Tactic> {
+        Tactic::ALL.into_iter().find(|t| t.name() == s)
+    }
 }
 
 /// Two tactics are "adjacent" for chain-multiplier purposes if they are

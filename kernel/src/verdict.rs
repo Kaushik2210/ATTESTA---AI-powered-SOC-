@@ -10,6 +10,27 @@ pub enum Severity {
     Critical,
 }
 
+impl Severity {
+    pub const ALL: [Severity; 5] =
+        [Severity::Info, Severity::Low, Severity::Medium, Severity::High, Severity::Critical];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Severity::Info => "info",
+            Severity::Low => "low",
+            Severity::Medium => "medium",
+            Severity::High => "high",
+            Severity::Critical => "critical",
+        }
+    }
+
+    /// Inverse of `name` — see Tactic::from_name's doc comment for why
+    /// this lives here rather than in a consumer's own module.
+    pub fn from_name(s: &str) -> Option<Severity> {
+        Severity::ALL.into_iter().find(|sev| sev.name() == s)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(u8)]
 pub enum Disposition {
@@ -23,6 +44,24 @@ pub enum Disposition {
     Benign,
     Suspicious,
     Malicious,
+}
+
+impl Disposition {
+    pub const ALL: [Disposition; 4] =
+        [Disposition::Incomplete, Disposition::Benign, Disposition::Suspicious, Disposition::Malicious];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Disposition::Incomplete => "incomplete",
+            Disposition::Benign => "benign",
+            Disposition::Suspicious => "suspicious",
+            Disposition::Malicious => "malicious",
+        }
+    }
+
+    pub fn from_name(s: &str) -> Option<Disposition> {
+        Disposition::ALL.into_iter().find(|d| d.name() == s)
+    }
 }
 
 /// Severity maps to Disposition by a fixed rule, not a second

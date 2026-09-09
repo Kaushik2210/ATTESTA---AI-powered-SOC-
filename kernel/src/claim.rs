@@ -9,6 +9,23 @@ pub enum Polarity {
     Refutes,
 }
 
+impl Polarity {
+    pub fn name(self) -> &'static str {
+        match self {
+            Polarity::Supports => "supports",
+            Polarity::Refutes => "refutes",
+        }
+    }
+
+    pub fn from_name(s: &str) -> Option<Polarity> {
+        match s {
+            "supports" => Some(Polarity::Supports),
+            "refutes" => Some(Polarity::Refutes),
+            _ => None,
+        }
+    }
+}
+
 /// One typed, evidence-cited assertion — docs/ARCHITECTURE.md §2.7's
 /// Claim schema. This is a deliberately reduced form: `subject`/`object`
 /// are plain entity-identifier strings rather than a structured

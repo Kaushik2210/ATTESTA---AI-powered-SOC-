@@ -13,6 +13,15 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 blake3 = "1.5"
+# Used only by src/bin/adjudicate_cli.rs (the JSON bridge other services,
+# e.g. services/investigate/, call into) -- lib.rs itself never imports
+# serde. A package-level [dependencies] entry makes a crate AVAILABLE to
+# every target, but adjudicate()'s own compiled code never references it,
+# so this does not add anything to what the determinism gate has to
+# reason about for the kernel function itself. See
+# phases/reports/PHASE-06.md.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [lints.rust]
 warnings = "deny"

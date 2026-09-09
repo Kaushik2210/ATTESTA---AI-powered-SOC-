@@ -35,6 +35,7 @@ jobs:
       - name: Install project dependencies (so the audit scans what we actually ship)
         run: |
           pip install -e ".[dev]"
+          pip install -e "./services/investigate[dev]"
           npm install --no-audit --no-fund
           go mod tidy
 
@@ -94,6 +95,11 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
       - name: go test ./... (ledger canonicalization/Merkle/epoch, ingest OCSF mapping/replay, agent backpressure buffer)
         run: |
           go mod tidy
@@ -127,6 +133,15 @@ jobs:
 
       - name: Compare native vs wasm32 kernel execution (Node.js WebAssembly BigInt i64 comparison)
         run: node kernel/wasm_cross_check.mjs target/wasm32-unknown-unknown/release/attesta_kernel.wasm kernel-hashes-${{ matrix.os }}.txt
+
+      - name: cargo build kernel --bins --release (adjudicate_cli, the JSON bridge services/investigate calls)
+        run: cargo build --manifest-path kernel/Cargo.toml --release --bins
+
+      - name: Install services/investigate (Claim Gate, provider abstraction, investigator loop)
+        run: pip install -e "./services/investigate[dev]"
+
+      - name: pytest services/investigate -- includes the real injection-containment gate against the built kernel CLI
+        run: pytest services/investigate/tests -v
 
       - name: Upload native kernel hashes (for the cross-architecture comparison job below)
         uses: actions/upload-artifact@v4
