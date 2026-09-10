@@ -13,6 +13,8 @@
     "postinstall": "echo 'root install complete — per-service dependencies live in their own package.json once those services exist'"
   },
   "devDependencies": {
-    "license-checker-rseidelsohn": "^4.3.0"
+    "license-checker-rseidelsohn": "^4.3.0",
+    "playwright": "^1.63.0",
+    "wait-on": "^9.1.0"
   }
 }

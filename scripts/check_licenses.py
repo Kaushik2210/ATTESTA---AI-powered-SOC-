@@ -26,7 +26,7 @@ POLICY_FILE = ROOT / ".licenserc.yaml"
 # This repository's own package(s) — proprietary product code, not a
 # third-party dependency, so it doesn't belong in a *dependency* license
 # gate. README.md / docs/LICENSE-POLICY.md cover the product's own license.
-OWN_PACKAGES = {"attesta", "attesta-investigate", "attesta-adjudicate"}
+OWN_PACKAGES = {"attesta", "attesta-investigate", "attesta-adjudicate", "web"}
 
 
 def load_policy() -> tuple[set[str], set[str]]:
@@ -108,21 +108,29 @@ def check_pip_licenses(allow: set[str], always_deny: set[str]) -> list[str]:
 
 
 def check_js_licenses(allow: set[str], always_deny: set[str]) -> list[str]:
-    path = AUDIT_DIR / "js-licenses.json"
-    if not path.exists():
-        return []
     violations = []
-    data = json.loads(path.read_text(encoding="utf-8"))
-    for pkg, info in data.items():
-        pkg_name = pkg.rsplit("@", 1)[0]
-        if pkg_name.lower() in OWN_PACKAGES:
+    # js-licenses.json: the root package.json's own (dev-tooling) tree.
+    # js-licenses-web.json: web/'s tree -- the actual shipped product's
+    # runtime dependencies (Next.js, React, Radix, ...), audited
+    # separately since npm workspaces aren't configured (root
+    # package.json's "workspaces" is deliberately empty -- see its own
+    # description field) and license-checker-rseidelsohn only walks the
+    # tree from wherever it's invoked.
+    for filename in ("js-licenses.json", "js-licenses-web.json"):
+        path = AUDIT_DIR / filename
+        if not path.exists():
             continue
-        license_expr = info.get("licenses", "UNKNOWN")
-        tokens = tokenize(license_expr)
-        if any(t in always_deny for t in tokens):
-            violations.append(f"js: {pkg} carries denylisted license '{license_expr}'")
-        elif not any(t in allow for t in tokens):
-            violations.append(f"js: {pkg} license '{license_expr}' is not on the allowlist")
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for pkg, info in data.items():
+            pkg_name = pkg.rsplit("@", 1)[0]
+            if pkg_name.lower() in OWN_PACKAGES:
+                continue
+            license_expr = info.get("licenses", "UNKNOWN")
+            tokens = tokenize(license_expr)
+            if any(t in always_deny for t in tokens):
+                violations.append(f"js: {pkg} carries denylisted license '{license_expr}' ({filename})")
+            elif not any(t in allow for t in tokens):
+                violations.append(f"js: {pkg} license '{license_expr}' is not on the allowlist ({filename})")
     return violations
 
 

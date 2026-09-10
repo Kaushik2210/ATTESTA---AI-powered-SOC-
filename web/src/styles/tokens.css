@@ -1,0 +1,218 @@
+/*
+ * ATTESTA design tokens — docs/UI-SPEC.md "Design system generation":
+ * "Tokens land in web/src/styles/tokens.css as CSS custom properties
+ * consumed by Tailwind v4's @theme. No raw hex in any component, ever."
+ *
+ * Every color, radius, spacing, type, and motion value the product uses
+ * is defined exactly once, here. Components reference Tailwind utility
+ * classes (bg-canvas, text-primary, rounded-md, ...) that resolve to
+ * these variables — never a literal hex/px value inline. That is what
+ * `/design-system audit` (phases/reports/PHASE-09.md) checks for.
+ *
+ * Two layers:
+ *   1. --attesta-* : the actual palette/scale, semantic and theme-scoped.
+ *   2. shadcn's own expected variable names (--background, --primary, ...)
+ *      remapped onto layer 1, so shadcn/ui + Radix primitives pick up
+ *      ATTESTA's look without every component needing to be rewritten.
+ *
+ * Design law source: docs/UI-SPEC.md's eight non-negotiable rules --
+ * dark-first genuinely dark canvas, density tier 9, color carries
+ * meaning only (severity is the ONLY thing allowed red/amber), sharp
+ * 4-6px radii, hairline low-contrast borders, monospace for every
+ * identifier/hash. Contrast targets: text >= 4.5:1, UI boundaries >= 3:1
+ * against their surface, checked by hand for every color pair below
+ * (see phases/reports/PHASE-09.md for the arithmetic on the closest
+ * calls -- accent, amber, and red against each theme's canvas).
+ */
+
+:root {
+  /* ---- Type scale (docs/UI-SPEC.md: 13px base for tabular data, 14-15px
+     prose, density tier 9) ---- */
+  --attesta-text-xs: 0.75rem;    /* 12px — chip labels, timestamps */
+  --attesta-text-sm: 0.8125rem;  /* 13px — tabular/data-dense rows */
+  --attesta-text-base: 0.875rem; /* 14px — prose, form fields */
+  --attesta-text-md: 0.9375rem;  /* 15px — prose upper bound */
+  --attesta-text-lg: 1rem;       /* 16px — section headings */
+  --attesta-text-xl: 1.125rem;   /* 18px — panel titles */
+  --attesta-text-2xl: 1.5rem;    /* 24px — page titles */
+  --attesta-text-3xl: 2rem;      /* 32px — rare, stat hero numbers only */
+
+  /* ---- Spacing scale (density 9: 8-32px dashboard rhythm, plus a
+     couple of sub-8 steps for hairline-adjacent gaps) ---- */
+  --attesta-space-1: 0.125rem; /* 2px */
+  --attesta-space-2: 0.25rem;  /* 4px */
+  --attesta-space-3: 0.375rem; /* 6px */
+  --attesta-space-4: 0.5rem;   /* 8px */
+  --attesta-space-5: 0.75rem;  /* 12px */
+  --attesta-space-6: 1rem;     /* 16px */
+  --attesta-space-7: 1.25rem;  /* 20px */
+  --attesta-space-8: 1.5rem;   /* 24px */
+  --attesta-space-9: 2rem;     /* 32px */
+
+  /* ---- Radius scale (docs/UI-SPEC.md: "sharper radii 4-6px" — NOT
+     default shadcn's rounder scale) ---- */
+  --attesta-radius-sm: 0.25rem;  /* 4px */
+  --attesta-radius-md: 0.3125rem; /* 5px */
+  --attesta-radius-lg: 0.375rem;  /* 6px */
+
+  /* ---- Row heights (density 9: compact 28-32px) ---- */
+  --attesta-row-compact: 1.75rem; /* 28px */
+  --attesta-row-default: 2rem;    /* 32px */
+
+  /* ---- Motion tokens — the only source of animation numbers
+     (docs/UI-SPEC.md: "Motion is explanatory, never ornamental").
+     150-300ms range; exit shorter than enter. ---- */
+  --attesta-duration-fast: 120ms;
+  --attesta-duration-base: 180ms;
+  --attesta-duration-slow: 260ms;
+  --attesta-ease-enter: cubic-bezier(0.16, 1, 0.3, 1);  /* ease-out-expo-ish */
+  --attesta-ease-exit: cubic-bezier(0.7, 0, 0.84, 0);   /* ease-in */
+  --attesta-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- Font families (self-hosted via next/font, CLAUDE.md §3/§6 —
+     never a runtime CDN call) ---- */
+  --attesta-font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --attesta-font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", monospace;
+}
+
+/* ============================= DARK (default) ============================= */
+:root,
+.dark {
+  --attesta-bg-canvas: #0a0b0d;
+  --attesta-bg-surface-1: #131417; /* cards, sidebar, table rows */
+  --attesta-bg-surface-2: #1b1d21; /* popovers, dropdowns, tooltips */
+  --attesta-bg-surface-3: #212328; /* modals, sheets — highest elevation */
+  --attesta-bg-hover: #191b1f;
+
+  --attesta-border-hairline: #2a2c31; /* low-contrast 1px dividers */
+  --attesta-border-strong: #3a3d44;   /* inputs, focus-adjacent */
+
+  --attesta-text-primary: #edeef0;
+  --attesta-text-secondary: #a3a7b0;
+  /* #6e7280 measured 3.52:1 / 4.1:1 against surface-2/canvas via
+     axe-core -- same class of bug as the light-theme tertiary token,
+     caught the same way. Lightened to clear 4.5:1 against both. */
+  --attesta-text-tertiary: #8a8e99;
+  --attesta-text-on-accent: #05070b;
+
+  --attesta-accent: #4c8dff;
+  --attesta-accent-hover: #6aa0ff;
+
+  /* Severity — the ONLY tokens permitted to be red/amber
+     (docs/UI-SPEC.md rule 4). */
+  --attesta-severity-info: #8a8e99;
+  --attesta-severity-low: #4c8dff;
+  --attesta-severity-medium: #e8a33d;
+  --attesta-severity-high: #e5484d;
+  --attesta-severity-critical: #ff5d68;
+
+  /* Disposition — meaningful, not decorative; distinct from the
+     severity red/amber reservation. */
+  --attesta-disposition-benign: #3fb97f;
+  --attesta-disposition-suspicious: #e8a33d;
+  --attesta-disposition-malicious: #e5484d;
+  --attesta-disposition-incomplete: #8a8e99;
+
+  color-scheme: dark;
+}
+
+/* ============================= LIGHT ============================= */
+.light {
+  --attesta-bg-canvas: #f7f8fa;
+  --attesta-bg-surface-1: #ffffff;
+  --attesta-bg-surface-2: #f0f1f3;
+  --attesta-bg-surface-3: #ffffff;
+  --attesta-bg-hover: #eef0f2;
+
+  --attesta-border-hairline: #e2e4e8;
+  --attesta-border-strong: #c9ccd3;
+
+  --attesta-text-primary: #14161a;
+  --attesta-text-secondary: #4b4f58;
+  /* #7a7e87 measured 3.59:1 / 3.82:1 against surface-2/canvas via
+     axe-core -- caught by actual testing (phases/reports/PHASE-09.md),
+     not the hand-computed estimate this file started with. Darkened to
+     clear 4.5:1 against both with margin. */
+  --attesta-text-tertiary: #5b5f68;
+  --attesta-text-on-accent: #ffffff;
+
+  --attesta-accent: #3560c9;
+  --attesta-accent-hover: #2a4fa8;
+
+  --attesta-severity-info: #5b5f68;
+  --attesta-severity-low: #3560c9;
+  --attesta-severity-medium: #8a5a10;
+  --attesta-severity-high: #c0242f;
+  --attesta-severity-critical: #a01722;
+
+  --attesta-disposition-benign: #1e7a4c;
+  --attesta-disposition-suspicious: #8a5a10;
+  --attesta-disposition-malicious: #c0242f;
+  --attesta-disposition-incomplete: #5b5f68;
+
+  color-scheme: light;
+}
+
+/* ================== shadcn/ui + Radix remap ==================
+   shadcn components reference these names; ATTESTA's own tokens above
+   are the only place a color is actually chosen. */
+:root,
+.dark {
+  --background: var(--attesta-bg-canvas);
+  --foreground: var(--attesta-text-primary);
+  --card: var(--attesta-bg-surface-1);
+  --card-foreground: var(--attesta-text-primary);
+  --popover: var(--attesta-bg-surface-2);
+  --popover-foreground: var(--attesta-text-primary);
+  --primary: var(--attesta-accent);
+  --primary-foreground: var(--attesta-text-on-accent);
+  --secondary: var(--attesta-bg-surface-2);
+  --secondary-foreground: var(--attesta-text-primary);
+  --muted: var(--attesta-bg-surface-2);
+  --muted-foreground: var(--attesta-text-secondary);
+  --accent: var(--attesta-bg-hover);
+  --accent-foreground: var(--attesta-text-primary);
+  --destructive: var(--attesta-severity-high);
+  --border: var(--attesta-border-hairline);
+  --input: var(--attesta-border-strong);
+  --ring: var(--attesta-accent);
+  --radius: var(--attesta-radius-lg);
+  --sidebar: var(--attesta-bg-surface-1);
+  --sidebar-foreground: var(--attesta-text-primary);
+  --sidebar-primary: var(--attesta-accent);
+  --sidebar-primary-foreground: var(--attesta-text-on-accent);
+  --sidebar-accent: var(--attesta-bg-hover);
+  --sidebar-accent-foreground: var(--attesta-text-primary);
+  --sidebar-border: var(--attesta-border-hairline);
+  --sidebar-ring: var(--attesta-accent);
+}
+
+.light {
+  --background: var(--attesta-bg-canvas);
+  --foreground: var(--attesta-text-primary);
+  --card: var(--attesta-bg-surface-1);
+  --card-foreground: var(--attesta-text-primary);
+  --popover: var(--attesta-bg-surface-2);
+  --popover-foreground: var(--attesta-text-primary);
+  --primary: var(--attesta-accent);
+  --primary-foreground: var(--attesta-text-on-accent);
+  --secondary: var(--attesta-bg-surface-2);
+  --secondary-foreground: var(--attesta-text-primary);
+  --muted: var(--attesta-bg-surface-2);
+  --muted-foreground: var(--attesta-text-secondary);
+  --accent: var(--attesta-bg-hover);
+  --accent-foreground: var(--attesta-text-primary);
+  --destructive: var(--attesta-severity-high);
+  --border: var(--attesta-border-hairline);
+  --input: var(--attesta-border-strong);
+  --ring: var(--attesta-accent);
+  --radius: var(--attesta-radius-lg);
+  --sidebar: var(--attesta-bg-surface-1);
+  --sidebar-foreground: var(--attesta-text-primary);
+  --sidebar-primary: var(--attesta-accent);
+  --sidebar-primary-foreground: var(--attesta-text-on-accent);
+  --sidebar-accent: var(--attesta-bg-hover);
+  --sidebar-accent-foreground: var(--attesta-text-primary);
+  --sidebar-border: var(--attesta-border-hairline);
+  --sidebar-ring: var(--attesta-accent);
+}

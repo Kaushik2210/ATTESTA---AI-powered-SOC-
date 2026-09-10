@@ -37,10 +37,15 @@ audit: bootstrap
 	else \
 		echo "  [skip] pip-licenses not installed (pip install .[dev])"; \
 	fi
-	@echo "== audit: js/ts =="
+	@echo "== audit: js/ts (root) =="
 	@if [ -f package.json ]; then \
 		npx --yes license-checker-rseidelsohn --production --json --out $(AUDIT_DIR)/js-licenses.json 2>/dev/null && \
 		echo "  wrote $(AUDIT_DIR)/js-licenses.json" || echo "  [skip] no resolvable JS dependency tree yet"; \
+	fi
+	@echo "== audit: js/ts (web/ — the shipped product's actual runtime dependency tree) =="
+	@if [ -f web/package.json ]; then \
+		cd web && npx --yes license-checker-rseidelsohn --production --json --out ../$(AUDIT_DIR)/js-licenses-web.json 2>/dev/null && \
+		echo "  wrote $(AUDIT_DIR)/js-licenses-web.json" || echo "  [skip] web/ dependency tree not installed yet"; \
 	fi
 	@echo "== audit: go =="
 	@if command -v go-licenses >/dev/null 2>&1; then \

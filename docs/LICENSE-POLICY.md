@@ -11,7 +11,7 @@
 
 ## ALLOWLIST — permitted SPDX identifiers
 
-`MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `PostgreSQL`, `Unlicense`, `CC0-1.0`, `Zlib`, `OFL-1.1` (fonts only), `PSF-2.0` (the CPython runtime itself — distinct from the MIT-licensed frameworks built on it, e.g. FastAPI/Pydantic/SQLAlchemy), `MPL-2.0` (**file-level copyleft — permitted only for unmodified, separately-distributed components such as OpenTofu; never vendored into our source tree**), `Unicode-3.0` (OSI-approved permissive license on Unicode Character Database data; carried by `unicode-ident`, a transitive Rust dependency of `serde_derive`/`syn`/`proc-macro2`).
+`MIT`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `PostgreSQL`, `Unlicense`, `CC0-1.0`, `Zlib`, `OFL-1.1` (fonts only), `PSF-2.0` (the CPython runtime itself — distinct from the MIT-licensed frameworks built on it, e.g. FastAPI/Pydantic/SQLAlchemy), `MPL-2.0` (**file-level copyleft — permitted only for unmodified, separately-distributed components such as OpenTofu; never vendored into our source tree**), `Unicode-3.0` (OSI-approved permissive license on Unicode Character Database data; carried by `unicode-ident`, a transitive Rust dependency of `serde_derive`/`syn`/`proc-macro2`), `0BSD` (public-domain-equivalent; carried by `tslib`), `CC-BY-4.0` (data-only usage; carried by `caniuse-lite`'s browser-support tables, a transitive dependency of the Tailwind/PostCSS build toolchain — attribution satisfied via `THIRD-PARTY-NOTICES.md`, never rendered as UI chrome).
 
 Anything not on this list requires an explicit written exception from the maintainer, recorded in `docs/LICENSE-EXCEPTIONS.md`.
 

@@ -162,6 +162,50 @@ jobs:
           name: kernel-hashes-${{ matrix.os }}
           path: kernel-hashes-${{ matrix.os }}.txt
 
+  web-ui-gate:
+    name: web UI foundation (lint, build, axe-core, keyboard traversal, screenshots)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: npm install (root -- playwright + axe-core for the gate script)
+        run: npm install --no-audit --no-fund
+
+      - name: npm install (web/)
+        run: cd web && npm install --no-audit --no-fund
+
+      - name: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: npm run lint (web/)
+        run: cd web && npm run lint
+
+      - name: npm run build (web/)
+        run: cd web && npm run build
+
+      - name: npm run start (background), wait for :3000, then run eval/ui/gate.mjs
+        # One step, not three: a background process started with `&` in a
+        # GitHub Actions `run:` block doesn't reliably survive into a
+        # later step (the runner tears down each step's process group),
+        # so the server, the wait, and the gate script all have to share
+        # this one shell.
+        run: |
+          (cd web && npm run start) &
+          npx wait-on http://localhost:3000/login --timeout 60000
+          node eval/ui/gate.mjs
+
+      - name: Upload UI gate screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-gate-screenshots
+          path: phases/reports/screenshots/
+
   kernel-cross-arch-check:
     name: kernel cross-architecture determinism (x86_64 vs arm64)
     needs: ledger-tests

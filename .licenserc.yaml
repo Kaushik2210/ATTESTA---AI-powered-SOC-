@@ -18,6 +18,8 @@ allow:
   - OFL-1.1        # fonts only — flagged, not auto-approved, if attached to code
   - PSF-2.0        # CPython runtime itself
   - MPL-2.0        # unmodified, separately-distributed components only (e.g. OpenTofu)
+  - 0BSD           # public-domain-equivalent, no conditions at all (e.g. tslib)
+  - CC-BY-4.0      # data-only usage (e.g. caniuse-lite's browser support tables), attribution via THIRD-PARTY-NOTICES.md
 
 # Packages that legitimately carry a license string our scanners can't
 # resolve cleanly (dual-licensed, unpublished metadata, etc.). Each entry
