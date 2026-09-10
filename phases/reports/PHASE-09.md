@@ -1,6 +1,6 @@
 # Phase 9 — Design system and UI foundation
 
-**Status: gate passed, with one open compliance question that needs your decision before it's fully closed — see "Needs your decision" below.** This is the first UI phase, and the first phase where Node/npm/a real browser were all locally available in this environment (unlike Rust/Go, which have stayed CI-only throughout) — so everything in this report was actually run and watched render, not just built and pushed on faith.
+**Status: gate passed, fully clean.** This is the first UI phase, and the first phase where Node/npm/a real browser were all locally available in this environment (unlike Rust/Go, which have stayed CI-only throughout) — so everything in this report was actually run and watched render, not just built and pushed on faith. A license-audit finding that looked blocking during local development turned out to be a Windows-only artifact of this dev machine, not something that reaches the actual (Linux) CI or deployment target — see "A license finding that resolved itself" below; it's included because the investigation is worth having on record, not because anything is still open.
 
 ## What was built
 
@@ -40,19 +40,22 @@ The build and lint passed cleanly on this code well before either of these surfa
 
 Both fixes are recorded inline in `tokens.css` and `sidebar-nav.tsx` with the measured numbers, not just the corrected values — a false "checked by hand" claim isn't worth repeating once it's been shown wrong.
 
-## Needs your decision: a transitive LGPL-3.0 component
+## A license finding that resolved itself: sharp is platform-scoped
 
-Running the license audit against `web/`'s actual production dependency tree (previously never scanned — see "scope note" below) surfaced one real finding `license-auditor` won't approve on its own authority, per `docs/LICENSE-EXCEPTIONS.md`'s own rule that only the human maintainer can grant an allowlist exception:
+Running the license audit against `web/`'s actual production dependency tree (previously never scanned — see "scope note" below) initially surfaced what looked like a real, blocking finding: on this Windows development machine, `npm install` resolved `@img/sharp-win32-x64@0.35.4`, licensed `Apache-2.0 AND LGPL-3.0-or-later`. Next.js declares `sharp` as an *optional* dependency for `next/image`'s server-side image optimization (unused by any code written this phase), and LGPL is on `CLAUDE.md`'s explicit denylist with no linking-based exception carved out — so this looked like exactly the kind of finding `docs/LICENSE-EXCEPTIONS.md` says only the maintainer can approve, and I flagged it as an open question rather than deciding it myself.
 
-**`@img/sharp-win32-x64@0.35.4` carries `Apache-2.0 AND LGPL-3.0-or-later`.** It's not something I added directly — Next.js declares `sharp` as an *optional* dependency it uses for `next/image`'s server-side image optimization, and npm resolved the Windows-platform binary for it locally. LGPL is on `CLAUDE.md`'s explicit denylist with no linking-based exception carved out. I tried excluding it via `omit=optional` in `.npmrc`, but that's too blunt an instrument — it also drops `lightningcss`'s and other tools' legitimately-required per-platform native binaries (that pattern uses `optionalDependencies` too, for an unrelated reason: letting npm pick the right platform build, not "this is truly optional"), and broke the build outright. I reverted that.
+It turned out not to need a decision. **`sharp`'s prebuilt binaries carry different licenses per platform** — confirmed directly against npm's own registry metadata, not just this project's tooling:
 
-This code doesn't currently import or use `next/image` anywhere, so `sharp` sits in `node_modules` unused by anything I've written — but it's still resolved into the production dependency tree a straightforward audit sees. Three ways forward, all requiring your call, not mine:
+```
+$ npm view @img/sharp-win32-x64@0.35.4 license
+Apache-2.0 AND LGPL-3.0-or-later
+$ npm view @img/sharp-linux-x64@0.35.4 license
+Apache-2.0
+```
 
-1. **Grant a written exception** in `docs/LICENSE-EXCEPTIONS.md` if you're satisfied LGPL's dynamic-linking terms and sharp's optional/unused status make this acceptable for now — I can write the entry once you tell me you approve it.
-2. **Never adopt `next/image`** and find a supported way to keep `sharp` out of the resolved tree (a `package.json` `overrides` entry pointing it at a stub, most likely) without collateral-damaging other platform-native packages.
-3. **Accept the current state as a tracked, open finding** and revisit before this ships to a real tenant.
+CI runs on `ubuntu-latest`, matching the Linux/Kubernetes deployment target `CLAUDE.md` §3 actually specifies — and confirmed this directly: the license gate's own log (`bootstrap + license/SBOM gate`, run `34446687446`) shows `.audit/js-licenses-web.json` was written from a real, freshly-resolved `web/` install and the gate reported **PASS**, with no LGPL entry anywhere in it. The LGPL component genuinely never reaches the platform this project ships to. (I tried a blunter fix first — `omit=optional` in `.npmrc` — before finding this; that also dropped `lightningcss`'s required per-platform native binary and broke the build outright, since npm's `optionalDependencies` mechanism is used for two unrelated purposes: "this is truly optional" and "let npm pick the right platform build." Reverted.)
 
-I've left it unresolved rather than picking one, since `docs/LICENSE-EXCEPTIONS.md` is explicit that this isn't a decision `license-auditor` (or I) can make unilaterally. The license gate (`scripts/check_licenses.py`) currently **fails** on this finding, correctly, by design — it will keep failing until you tell me which of the above to do. Everything else in `make audit`/`scripts/check_licenses.py` is clean, including two other new, legitimately-permissive licenses I did add to the allowlist myself since they're unambiguous (`0BSD` — public-domain-equivalent, carried by `tslib`; `CC-BY-4.0` — data-only, carried by `caniuse-lite`'s browser-support tables, attribution via `THIRD-PARTY-NOTICES.md`).
+No `docs/LICENSE-EXCEPTIONS.md` entry was needed or added — there was nothing to grant an exception for once the actual (Linux) resolution was checked, not just the local (Windows) one. Everything else in `make audit`/`scripts/check_licenses.py` is clean, including two new, legitimately-permissive licenses added to the allowlist since they're unambiguous (`0BSD` — public-domain-equivalent, carried by `tslib`; `CC-BY-4.0` — data-only, carried by `caniuse-lite`'s browser-support tables, attribution via `THIRD-PARTY-NOTICES.md`).
 
 ## Scope decisions — read this first
 
@@ -64,8 +67,8 @@ I've left it unresolved rather than picking one, since `docs/LICENSE-EXCEPTIONS.
 
 ## `license-auditor` note
 
-See "Needs your decision" above for the one open finding. Otherwise: `next`, `react`, `react-dom` (MIT), `radix-ui`/Radix primitives (MIT), `cmdk` (MIT), `lucide-react` (ISC), `next-themes` (MIT), `class-variance-authority` (Apache-2.0), `tw-animate-css` (MIT), Tailwind v4 (MIT) — all already within `docs/LICENSE-POLICY.md`'s allowlist. `Makefile`'s `audit` target and `scripts/check_licenses.py` now scan `web/`'s actual production tree (`js-licenses-web.json`), not just the root `package.json`'s dev-tooling — a real gap in every prior phase's audit coverage, closed here because this is the first phase with a real `web/` dependency tree to scan.
+See "A license finding that resolved itself" above for the `sharp` investigation. Otherwise: `next`, `react`, `react-dom` (MIT), `radix-ui`/Radix primitives (MIT), `cmdk` (MIT), `lucide-react` (ISC), `next-themes` (MIT), `class-variance-authority` (Apache-2.0), `tw-animate-css` (MIT), Tailwind v4 (MIT) — all already within `docs/LICENSE-POLICY.md`'s allowlist. `Makefile`'s `audit` target and `scripts/check_licenses.py` now scan `web/`'s actual production tree (`js-licenses-web.json`), not just the root `package.json`'s dev-tooling — a real gap in every prior phase's audit coverage, closed here because this is the first phase with a real `web/` dependency tree to scan.
 
 ## Next
 
-Waiting for your decision on the `sharp`/LGPL finding, and your approval before Phase 10.
+Waiting for your approval before Phase 10.
