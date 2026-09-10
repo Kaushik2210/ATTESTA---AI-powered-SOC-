@@ -6,6 +6,7 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import { Topbar } from "@/components/topbar";
 import { CommandPalette } from "@/components/command-palette";
 import { ShortcutsHelp } from "@/components/shortcuts-help";
+import { QueryProvider } from "@/components/query-provider";
 
 /**
  * The protected shell — every surface in docs/UI-SPEC.md renders inside
@@ -22,19 +23,21 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
 
   return (
     <SessionProvider session={session}>
-      <ConsoleChromeProvider>
-        <div className="flex h-dvh">
-          <SidebarNav />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <Topbar />
-            <main id="main-content" className="min-h-0 flex-1 overflow-auto">
-              {children}
-            </main>
+      <QueryProvider>
+        <ConsoleChromeProvider>
+          <div className="flex h-dvh">
+            <SidebarNav />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <Topbar />
+              <main id="main-content" className="min-h-0 flex-1 overflow-auto">
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
-        <CommandPalette />
-        <ShortcutsHelp />
-      </ConsoleChromeProvider>
+          <CommandPalette />
+          <ShortcutsHelp />
+        </ConsoleChromeProvider>
+      </QueryProvider>
     </SessionProvider>
   );
 }

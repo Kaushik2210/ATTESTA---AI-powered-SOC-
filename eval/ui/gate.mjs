@@ -18,7 +18,9 @@
  *   - keyboard traversal reaches the first N focusable elements with a
  *     visible :focus-visible ring
  *   - screenshots at 1280 / 1920 / 2560 x both themes, written to
- *     phases/reports/screenshots/
+ *     phases/reports/screenshots/ -- Watchfloor, Response Console, and
+ *     (since Phase 10) Timeline, the surfaces with real data-bearing
+ *     content rather than an empty-state stub
  *
  * Does NOT check (out of Phase 9's scope, noted honestly):
  *   - the 10k-node graph canvas fps floor (Investigation Canvas doesn't
@@ -125,14 +127,34 @@ async function main() {
       await checkKeyboardTraversal(page, failures);
     }
 
-    // Screenshots: Watchfloor at three widths, this theme.
-    for (const width of WIDTHS) {
-      await page.setViewportSize({ width, height: Math.round(width * 0.625) });
-      await page.goto(`${BASE_URL}/`);
-      await page.waitForTimeout(200);
-      const file = path.join(SCREENSHOT_DIR, `watchfloor-${theme}-${width}.png`);
-      await page.screenshot({ path: file });
-      console.log(`wrote ${file}`);
+    // Screenshots at three widths, this theme. Phase 9 covered only the
+    // Watchfloor since every other surface was still an empty-state
+    // stub sharing one shell; Phase 10 made Response Console and
+    // Timeline genuinely distinct, data-bearing surfaces (blast radius,
+    // ATT&CK tactic bands), so they get their own captures now too.
+    const firstCaseId = await page.evaluate(async () => {
+      const res = await fetch("/api/cases");
+      const data = await res.json();
+      return data.cases?.[0]?.id ?? null;
+    });
+    const screenshotSurfaces = [
+      { name: "watchfloor", path: "/" },
+      { name: "response-console", path: "/response-console" },
+      ...(firstCaseId ? [{ name: "timeline", path: `/timeline?case=${firstCaseId}` }] : []),
+    ];
+
+    for (const { name, path: surfacePath } of screenshotSurfaces) {
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: Math.round(width * 0.625) });
+        await page.goto(`${BASE_URL}${surfacePath}`);
+        // response-console's blast radius has a deliberate ~900ms delay
+        // (the gate for the approve-button assertion) -- wait it out so
+        // the screenshot shows the settled panel, not the loading spinner.
+        await page.waitForTimeout(name === "response-console" ? 1200 : 300);
+        const file = path.join(SCREENSHOT_DIR, `${name}-${theme}-${width}.png`);
+        await page.screenshot({ path: file });
+        console.log(`wrote ${file}`);
+      }
     }
 
     await context.close();

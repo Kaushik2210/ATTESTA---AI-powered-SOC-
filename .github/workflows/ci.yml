@@ -188,16 +188,20 @@ jobs:
       - name: npm run build (web/)
         run: cd web && npm run build
 
-      - name: npm run start (background), wait for :3000, then run eval/ui/gate.mjs
+      - name: npm run start (background), wait for :3000, then run eval/ui/gate.mjs and eval/ui/triage-flow.mjs
         # One step, not three: a background process started with `&` in a
         # GitHub Actions `run:` block doesn't reliably survive into a
         # later step (the runner tears down each step's process group),
-        # so the server, the wait, and the gate script all have to share
-        # this one shell.
+        # so the server, the wait, and both gate scripts all have to
+        # share this one shell. triage-flow.mjs is Phase 10's gate
+        # (phases/PHASES.md): end-to-end triage flow, 10k-row scroll
+        # fps, and the blast-radius-gates-approve-button assertion,
+        # measured against the real server rather than mocked.
         run: |
           (cd web && npm run start) &
           npx wait-on http://localhost:3000/login --timeout 60000
           node eval/ui/gate.mjs
+          node eval/ui/triage-flow.mjs
 
       - name: Upload UI gate screenshots
         if: always()
