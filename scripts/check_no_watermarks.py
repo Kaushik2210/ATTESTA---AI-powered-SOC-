@@ -33,6 +33,7 @@ EXEMPT_PREFIXES = (
     ".claude/",
     "CLAUDE.md",
     "scripts/check_no_watermarks.py",  # this file, which must contain the patterns above
+    "eval/ui/gate.mjs",  # the UI gate's own watermark check (docs/UI-SPEC.md) -- same reason
 )
 
 
