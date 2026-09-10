@@ -153,8 +153,8 @@ jobs:
       - name: Install services/adjudicate (manifest sealing, transparency log, replay executor)
         run: pip install -e "./services/adjudicate[dev]"
 
-      - name: pytest services/adjudicate -- the Phase 7 gate (replay --pin on 1,000 manifests, --rederive, export bundle)
-        run: pytest services/adjudicate/tests -v
+      - name: pytest services/adjudicate -- Phase 7 (replay --pin/--rederive, export bundle) and Phase 8 (RVD sweep) gates
+        run: pytest services/adjudicate/tests -v -s
 
       - name: Upload native kernel hashes (for the cross-architecture comparison job below)
         uses: actions/upload-artifact@v4
