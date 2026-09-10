@@ -28,6 +28,11 @@ class ManifestStore:
     def __init__(self) -> None:
         self._chain_tip: dict[str, str] = {}
         self._cases: dict[str, CaseRecord] = {}
+        # case_id -> whatever the caller passes to mark_reopened (an
+        # rvd.VerdictDrift in practice). Typed Any rather than imported
+        # from rvd.py to avoid a store.py <-> rvd.py import cycle: rvd.py
+        # already needs ManifestStore to run a sweep over.
+        self._reopened: dict[str, Any] = {}
 
     def close_case(
         self,
@@ -82,6 +87,24 @@ class ManifestStore:
 
     def chain_tip(self, tenant_id: str) -> str:
         return self._chain_tip.get(tenant_id, "")
+
+    def mark_reopened(self, case_id: str, drift: Any) -> None:
+        """The reopen workflow docs/PHASES.md's Phase 8 gate names --
+        deliberately NOT a mutation of the CaseRecord itself (that stays
+        immutable, matching invariant I3's append-only discipline at the
+        manifest layer). Reopening is workflow state layered on top of an
+        unaltered, still independently-verifiable closed record.
+        """
+        self._reopened[case_id] = drift
+
+    def is_reopened(self, case_id: str) -> bool:
+        return case_id in self._reopened
+
+    def drift_for(self, case_id: str) -> Any:
+        return self._reopened.get(case_id)
+
+    def reopened_case_ids(self) -> list[str]:
+        return list(self._reopened.keys())
 
     def __len__(self) -> int:
         return len(self._cases)
