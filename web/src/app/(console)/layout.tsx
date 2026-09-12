@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { MotionConfig } from "motion/react";
 import { getSession } from "@/lib/auth/session";
 import { SessionProvider } from "@/components/session-context";
 import { ConsoleChromeProvider } from "@/components/console-chrome-provider";
@@ -24,19 +25,27 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
   return (
     <SessionProvider session={session}>
       <QueryProvider>
-        <ConsoleChromeProvider>
-          <div className="flex h-dvh">
-            <SidebarNav />
-            <div className="flex min-w-0 flex-1 flex-col">
-              <Topbar />
-              <main id="main-content" className="min-h-0 flex-1 overflow-auto">
-                {children}
-              </main>
+        {/* Phase 11's first use of Motion (CLAUDE.md's "Motion" dependency):
+            reducedMotion="user" makes every motion.* animation in the
+            console honor prefers-reduced-motion automatically, per
+            docs/UI-SPEC.md rule 5 ("Everything respects
+            prefers-reduced-motion"), rather than each component having
+            to check the media query itself. */}
+        <MotionConfig reducedMotion="user">
+          <ConsoleChromeProvider>
+            <div className="flex h-dvh">
+              <SidebarNav />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <Topbar />
+                <main id="main-content" className="min-h-0 flex-1 overflow-auto">
+                  {children}
+                </main>
+              </div>
             </div>
-          </div>
-          <CommandPalette />
-          <ShortcutsHelp />
-        </ConsoleChromeProvider>
+            <CommandPalette />
+            <ShortcutsHelp />
+          </ConsoleChromeProvider>
+        </MotionConfig>
       </QueryProvider>
     </SessionProvider>
   );

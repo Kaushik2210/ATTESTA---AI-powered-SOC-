@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# kernel/wasm_bridge's compiled output -- built fresh by CI
+# (.github/workflows/ci.yml's web-ui-gate job) from the real Rust source
+# in kernel/wasm_bridge/, never committed as a binary. Build it locally
+# with:
+#   cargo build --manifest-path kernel/wasm_bridge/Cargo.toml --target wasm32-unknown-unknown --release
+#   cp ../target/wasm32-unknown-unknown/release/attesta_kernel_wasm_bridge.wasm public/kernel-verify.wasm
+public/kernel-verify.wasm

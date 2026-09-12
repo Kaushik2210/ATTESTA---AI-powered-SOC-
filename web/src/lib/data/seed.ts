@@ -161,4 +161,4 @@ export function generateTimelineEvents(c: Case, seed: number) {
   return events.sort((a, b) => a.atMs - b.atMs);
 }
 
-export { severityForScore, dispositionFor, randomEntity, tacticsForSeverity, statusForSeverity };
+export { severityForScore, dispositionFor, randomEntity, tacticsForSeverity, statusForSeverity, PREDICATES_BY_TACTIC };

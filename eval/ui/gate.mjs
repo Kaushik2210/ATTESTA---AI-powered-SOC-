@@ -43,7 +43,7 @@ const AXE_SOURCE = readFileSync(
 const BASE_URL = process.env.GATE_BASE_URL ?? "http://localhost:3000";
 
 const SURFACES = [
-  "/", "/investigation-canvas", "/timeline", "/verdict-ledger", "/drift-monitor",
+  "/", "/investigation-canvas", "/investigation-canvas?case=case-1", "/timeline", "/verdict-ledger", "/drift-monitor",
   "/response-console", "/coverage-map", "/detection-studio", "/tenant-admin",
 ];
 
@@ -118,7 +118,13 @@ async function main() {
 
     for (const surface of SURFACES) {
       await page.goto(`${BASE_URL}${surface}`);
-      await page.waitForTimeout(200);
+      // A loaded Investigation Canvas fades its right-panel empty state
+      // in via Motion (opacity 0->1) -- axe-core scanning mid-fade can
+      // catch a real-but-transient sub-threshold contrast frame that
+      // isn't a static design defect. 200ms is enough for every other
+      // surface's settle; this one gets the same longer wait the
+      // screenshot pass already uses.
+      await page.waitForTimeout(surface.includes("investigation-canvas?case=") ? 1000 : 200);
       await checkWatermarks(page, surface, failures);
       totalViolations += await checkAxe(page, surface, theme, failures);
     }
@@ -129,9 +135,10 @@ async function main() {
 
     // Screenshots at three widths, this theme. Phase 9 covered only the
     // Watchfloor since every other surface was still an empty-state
-    // stub sharing one shell; Phase 10 made Response Console and
-    // Timeline genuinely distinct, data-bearing surfaces (blast radius,
-    // ATT&CK tactic bands), so they get their own captures now too.
+    // stub sharing one shell; Phase 10 added Response Console and
+    // Timeline (blast radius, ATT&CK tactic bands); Phase 11 adds the
+    // Investigation Canvas (a real rendered evidence graph, not the
+    // empty state).
     const firstCaseId = await page.evaluate(async () => {
       const res = await fetch("/api/cases");
       const data = await res.json();
@@ -141,6 +148,9 @@ async function main() {
       { name: "watchfloor", path: "/" },
       { name: "response-console", path: "/response-console" },
       ...(firstCaseId ? [{ name: "timeline", path: `/timeline?case=${firstCaseId}` }] : []),
+      ...(firstCaseId ? [{ name: "investigation-canvas", path: `/investigation-canvas?case=${firstCaseId}` }] : []),
+      { name: "verdict-ledger", path: "/verdict-ledger" },
+      { name: "drift-monitor", path: "/drift-monitor" },
     ];
 
     for (const { name, path: surfacePath } of screenshotSurfaces) {
@@ -148,9 +158,12 @@ async function main() {
         await page.setViewportSize({ width, height: Math.round(width * 0.625) });
         await page.goto(`${BASE_URL}${surfacePath}`);
         // response-console's blast radius has a deliberate ~900ms delay
-        // (the gate for the approve-button assertion) -- wait it out so
-        // the screenshot shows the settled panel, not the loading spinner.
-        await page.waitForTimeout(name === "response-console" ? 1200 : 300);
+        // (the gate for the approve-button assertion), and the
+        // investigation canvas needs a moment for the WebGL frame to
+        // actually paint after layout/fit -- wait both out so the
+        // screenshot shows the settled surface, not a loading/blank frame.
+        const settleMs = name === "response-console" ? 1200 : name === "investigation-canvas" ? 2500 : 300;
+        await page.waitForTimeout(settleMs);
         const file = path.join(SCREENSHOT_DIR, `${name}-${theme}-${width}.png`);
         await page.screenshot({ path: file });
         console.log(`wrote ${file}`);

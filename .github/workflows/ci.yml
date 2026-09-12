@@ -144,6 +144,12 @@ jobs:
       - name: cargo build kernel --bins --release (adjudicate_cli, the JSON bridge services/investigate calls)
         run: cargo build --manifest-path kernel/Cargo.toml --release --bins
 
+      - name: cargo test kernel/wasm_bridge -- JSON round-trip, determinism, and tamper-detection tests (native)
+        run: cargo test --manifest-path kernel/wasm_bridge/Cargo.toml
+
+      - name: cargo build kernel/wasm_bridge --target wasm32-unknown-unknown (the Verdict Ledger's browser verification path, Phase 11)
+        run: cargo build --manifest-path kernel/wasm_bridge/Cargo.toml --target wasm32-unknown-unknown --release
+
       - name: Install services/investigate (Claim Gate, provider abstraction, investigator loop)
         run: pip install -e "./services/investigate[dev]"
 
@@ -173,6 +179,11 @@ jobs:
         with:
           node-version-file: .nvmrc
 
+      - name: Set up Rust (Phase 11 -- builds the Verdict Ledger's kernel-verify.wasm)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
       - name: npm install (root -- playwright + axe-core for the gate script)
         run: npm install --no-audit --no-fund
 
@@ -182,26 +193,38 @@ jobs:
       - name: npx playwright install --with-deps chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Build kernel/wasm_bridge for wasm32 and copy into web/public/ -- the exact binary the Verdict Ledger's browser panel loads and runs client-side (not a mock)
+        run: |
+          cargo build --manifest-path kernel/wasm_bridge/Cargo.toml --target wasm32-unknown-unknown --release
+          cp target/wasm32-unknown-unknown/release/attesta_kernel_wasm_bridge.wasm web/public/kernel-verify.wasm
+
       - name: npm run lint (web/)
         run: cd web && npm run lint
 
       - name: npm run build (web/)
         run: cd web && npm run build
 
-      - name: npm run start (background), wait for :3000, then run eval/ui/gate.mjs and eval/ui/triage-flow.mjs
-        # One step, not three: a background process started with `&` in a
-        # GitHub Actions `run:` block doesn't reliably survive into a
+      - name: npm run start (background), wait for :3000, then run all eval/ui gate scripts
+        # One step, not several: a background process started with `&` in
+        # a GitHub Actions `run:` block doesn't reliably survive into a
         # later step (the runner tears down each step's process group),
-        # so the server, the wait, and both gate scripts all have to
-        # share this one shell. triage-flow.mjs is Phase 10's gate
-        # (phases/PHASES.md): end-to-end triage flow, 10k-row scroll
-        # fps, and the blast-radius-gates-approve-button assertion,
-        # measured against the real server rather than mocked.
+        # so the server, the wait, and every gate script all have to
+        # share this one shell. triage-flow.mjs is Phase 10's gate: the
+        # end-to-end triage flow, 10k-row scroll fps, and the
+        # blast-radius-gates-approve-button assertion. investigation-
+        # canvas-flow.mjs and verdict-ledger-flow.mjs are Phase 11's:
+        # the 10,000-node WebGL graph at >=55fps with real node/claim
+        # selection and evidence verification, and the Verdict Ledger's
+        # client-side WASM verification succeeding AND demonstrably
+        # failing on a tampered claim set -- both against the real
+        # kernel-verify.wasm just built above, not a mock.
         run: |
           (cd web && npm run start) &
           npx wait-on http://localhost:3000/login --timeout 60000
           node eval/ui/gate.mjs
           node eval/ui/triage-flow.mjs
+          node eval/ui/investigation-canvas-flow.mjs
+          node eval/ui/verdict-ledger-flow.mjs
 
       - name: Upload UI gate screenshots
         if: always()
