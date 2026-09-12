@@ -11,10 +11,15 @@ const NODE_COLOR_DARK: [number, number, number, number] = [0.541, 0.557, 0.6, 1]
 const NODE_COLOR_LIGHT: [number, number, number, number] = [0.357, 0.373, 0.408, 1]; // #5b5f68
 const ACCENT_DARK: [number, number, number, number] = [0.298, 0.553, 1, 1]; // #4c8dff
 const ACCENT_LIGHT: [number, number, number, number] = [0.208, 0.376, 0.788, 1]; // #3560c9
-const SUPPORTS_COLOR_DARK: [number, number, number, number] = [0.541, 0.557, 0.6, 0.55];
-const SUPPORTS_COLOR_LIGHT: [number, number, number, number] = [0.357, 0.373, 0.408, 0.55];
-const REFUTES_COLOR_DARK: [number, number, number, number] = [0.541, 0.557, 0.6, 0.28];
-const REFUTES_COLOR_LIGHT: [number, number, number, number] = [0.357, 0.373, 0.408, 0.28];
+// Opaque, pre-mixed toward each theme's canvas background (not real-time
+// alpha blending -- see drawLines's blend:false comment below) at the
+// same 0.55/0.28 mix ratios the previous translucent versions used, so
+// the visual result (SUPPORTS more visible than REFUTES, both
+// desaturated against the canvas) is unchanged.
+const SUPPORTS_COLOR_DARK: [number, number, number, number] = [0.3151, 0.3257, 0.353, 1];
+const SUPPORTS_COLOR_LIGHT: [number, number, number, number] = [0.6324, 0.643, 0.6654, 1];
+const REFUTES_COLOR_DARK: [number, number, number, number] = [0.1796, 0.1869, 0.2047, 1];
+const REFUTES_COLOR_LIGHT: [number, number, number, number] = [0.7976, 0.805, 0.8198, 1];
 
 const HIT_RADIUS_PX = 10;
 const LABEL_ZOOM_THRESHOLD = 1.4;
@@ -229,7 +234,21 @@ export function GraphCanvas({
       },
       count: regl.prop<{ count: number }, "count">("count"),
       primitive: "lines",
-      blend: { enable: true, func: { srcRGB: "src alpha", srcAlpha: 1, dstRGB: "one minus src alpha", dstAlpha: 1 } },
+      // No alpha blending here (unlike drawPoints/drawSelected below,
+      // where the cost is negligible at ~10k circular points): alpha
+      // blending is a per-fragment read-modify-write, and this scene's
+      // ~13,000 heavily-overlapping SUPPORTS/REFUTES line segments make
+      // it the single most expensive thing being drawn. A software
+      // rasterizer (no dedicated blend hardware -- e.g. SwiftShader,
+      // which is what GitHub Actions' GPU-less CI runners fall back to)
+      // hit a hard, repeatable 30fps ceiling at 10,000 nodes with
+      // blending on; opaque colors pre-mixed toward the canvas
+      // background (SUPPORTS_COLOR/REFUTES_COLOR below) give the same
+      // "desaturated, layered" look without paying for blending, and
+      // restored 60fps on the same CI runner class. Confirmed by
+      // measuring in CI (`eval/ui/investigation-canvas-flow.mjs`), not
+      // by inspection -- see phases/reports/PHASE-11.md.
+      blend: { enable: false },
     });
 
     const dark = resolvedTheme !== "light";
