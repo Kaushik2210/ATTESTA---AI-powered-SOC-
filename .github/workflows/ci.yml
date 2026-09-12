@@ -196,6 +196,7 @@ jobs:
       - name: Build kernel/wasm_bridge for wasm32 and copy into web/public/ -- the exact binary the Verdict Ledger's browser panel loads and runs client-side (not a mock)
         run: |
           cargo build --manifest-path kernel/wasm_bridge/Cargo.toml --target wasm32-unknown-unknown --release
+          mkdir -p web/public
           cp target/wasm32-unknown-unknown/release/attesta_kernel_wasm_bridge.wasm web/public/kernel-verify.wasm
 
       - name: npm run lint (web/)
